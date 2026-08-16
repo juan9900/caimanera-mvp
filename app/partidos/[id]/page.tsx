@@ -15,6 +15,9 @@ import {
   cancelMatch,
 } from "@/app/actions/matches";
 import { ShareMatchButton } from "@/components/share-match-button";
+import { MatchActionForm } from "@/components/match-action-form";
+import { NotifyNeedPlayersForm } from "@/components/notify-need-players-form";
+import { EnableNotifications } from "@/components/enable-notifications";
 
 const SPORT_LABELS: Record<string, string> = { futbol: "Fútbol", tenis: "Tenis" };
 const VIBE_LABELS: Record<string, string> = {
@@ -98,67 +101,70 @@ export default async function MatchDetailPage(
           </div>
         </dl>
 
+        <div className="mt-6 flex items-center justify-between gap-3">
+          <p className="text-xs text-zinc-500">
+            {match.slots_filled}/{match.total_slots} cupos ocupados
+          </p>
+          <EnableNotifications />
+        </div>
+
+        {isOrganizer && match.status === "abierto" && match.slots_filled < match.total_slots && (
+          <div className="mt-4">
+            <NotifyNeedPlayersForm matchId={match.id} />
+          </div>
+        )}
+
         <div className="mt-6">
           {isOrganizer ? (
             match.status !== "cancelado" && (
-              <form action={cancelMatch}>
-                <input type="hidden" name="matchId" value={match.id} />
-                <button
-                  type="submit"
-                  className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
-                >
-                  Cancelar partido
-                </button>
-              </form>
+              <MatchActionForm
+                action={cancelMatch}
+                hiddenFields={{ matchId: match.id }}
+                label="Cancelar partido"
+                pendingLabel="Cancelando…"
+                className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+              />
             )
           ) : match.status === "cancelado" ? null : myParticipation ? (
             myParticipation.status === "confirmado" ? (
-              <form action={leaveMatch}>
-                <input type="hidden" name="matchId" value={match.id} />
-                <button
-                  type="submit"
-                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-                >
-                  Salir del partido
-                </button>
-              </form>
+              <MatchActionForm
+                action={leaveMatch}
+                hiddenFields={{ matchId: match.id }}
+                label="Salir del partido"
+                pendingLabel="Saliendo…"
+                className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
+              />
             ) : myParticipation.status === "pendiente" ? (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <p className="text-sm text-zinc-500">Tu solicitud está pendiente de aprobación.</p>
-                <form action={leaveMatch}>
-                  <input type="hidden" name="matchId" value={match.id} />
-                  <button
-                    type="submit"
-                    className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-                  >
-                    Cancelar solicitud
-                  </button>
-                </form>
+                <MatchActionForm
+                  action={leaveMatch}
+                  hiddenFields={{ matchId: match.id }}
+                  label="Cancelar solicitud"
+                  pendingLabel="Cancelando…"
+                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
+                />
               </div>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <p className="text-sm text-zinc-500">Tu solicitud fue rechazada.</p>
-                <form action={leaveMatch}>
-                  <input type="hidden" name="matchId" value={match.id} />
-                  <button
-                    type="submit"
-                    className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-                  >
-                    Quitar solicitud
-                  </button>
-                </form>
+                <MatchActionForm
+                  action={leaveMatch}
+                  hiddenFields={{ matchId: match.id }}
+                  label="Quitar solicitud"
+                  pendingLabel="Quitando…"
+                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
+                />
               </div>
             )
           ) : (
-            <form action={joinMatch}>
-              <input type="hidden" name="matchId" value={match.id} />
-              <button
-                type="submit"
-                className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-              >
-                Unirse
-              </button>
-            </form>
+            <MatchActionForm
+              action={joinMatch}
+              hiddenFields={{ matchId: match.id }}
+              label="Unirse"
+              pendingLabel="Uniendo…"
+              className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            />
           )}
         </div>
 
@@ -177,28 +183,18 @@ export default async function MatchDetailPage(
                     </span>
                   </span>
                   <div className="flex gap-2">
-                    <form action={respondToRequest}>
-                      <input type="hidden" name="participantId" value={p.id} />
-                      <input type="hidden" name="matchId" value={match.id} />
-                      <input type="hidden" name="approve" value="true" />
-                      <button
-                        type="submit"
-                        className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
-                      >
-                        Aprobar
-                      </button>
-                    </form>
-                    <form action={respondToRequest}>
-                      <input type="hidden" name="participantId" value={p.id} />
-                      <input type="hidden" name="matchId" value={match.id} />
-                      <input type="hidden" name="approve" value="false" />
-                      <button
-                        type="submit"
-                        className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
-                      >
-                        Rechazar
-                      </button>
-                    </form>
+                    <MatchActionForm
+                      action={respondToRequest}
+                      hiddenFields={{ participantId: p.id, matchId: match.id, approve: "true" }}
+                      label="Aprobar"
+                      className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    />
+                    <MatchActionForm
+                      action={respondToRequest}
+                      hiddenFields={{ participantId: p.id, matchId: match.id, approve: "false" }}
+                      label="Rechazar"
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
+                    />
                   </div>
                 </li>
               ))}
@@ -225,16 +221,12 @@ export default async function MatchDetailPage(
                     </span>
                   </span>
                   {isOrganizer && (
-                    <form action={removeParticipant}>
-                      <input type="hidden" name="participantId" value={p.id} />
-                      <input type="hidden" name="matchId" value={match.id} />
-                      <button
-                        type="submit"
-                        className="text-xs font-medium text-red-700 hover:underline"
-                      >
-                        Quitar
-                      </button>
-                    </form>
+                    <MatchActionForm
+                      action={removeParticipant}
+                      hiddenFields={{ participantId: p.id, matchId: match.id }}
+                      label="Quitar"
+                      className="text-xs font-medium text-red-700 hover:underline disabled:opacity-50"
+                    />
                   )}
                 </li>
               ))}

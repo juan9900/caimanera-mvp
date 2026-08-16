@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { signup } from "@/app/actions/auth";
 
-export function SignupForm() {
+export function SignupForm({ defaultInviteCode }: { defaultInviteCode?: string }) {
   const [state, action, pending] = useActionState(signup, undefined);
 
   return (
@@ -16,7 +16,8 @@ export function SignupForm() {
         <input
           id="inviteCode"
           name="inviteCode"
-          placeholder="Ej: A1B2C3"
+          defaultValue={defaultInviteCode}
+          placeholder="Ej: a1b2c3d4"
           className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
         />
         {state?.errors?.inviteCode && (

@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth/dal";
+import { requireAdmin } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import {
   AddCourtFormSchema,
@@ -12,7 +12,7 @@ export async function createCourt(
   _state: AddCourtFormState,
   formData: FormData
 ): Promise<AddCourtFormState> {
-  const session = await requireSession();
+  const session = await requireAdmin();
 
   const validatedFields = AddCourtFormSchema.safeParse({
     name: formData.get("name"),
@@ -38,6 +38,7 @@ export async function createCourt(
       contact_phone: contactPhone || null,
       schedule: schedule || null,
       added_by: session.userId,
+      is_official: true,
     })
     .select("id")
     .single();
@@ -46,5 +47,5 @@ export async function createCourt(
     return { message: "No se pudo agregar la cancha. Intenta de nuevo." };
   }
 
-  redirect(`/canchas/${data.id}`);
+  redirect(`/admin/canchas`);
 }

@@ -18,15 +18,22 @@ export default async function Home() {
       </p>
 
       {profile ? (
-        <div className="mt-6 text-zinc-700">
-          <p>¡Bienvenido de vuelta, {profile.name}!</p>
-          <p className="mt-2">
-            Todavía no hay partidos, pero ya puedes{" "}
-            <Link href="/canchas" className="font-medium text-green-700 hover:underline">
-              ver las canchas
+        <div className="mt-6 flex flex-col items-center gap-4">
+          <p className="text-zinc-700">¡Bienvenido de vuelta, {profile.name}!</p>
+          <Link
+            href="/partidos/nuevo"
+            className="rounded-md bg-green-600 px-6 py-3 text-lg font-medium text-white hover:bg-green-700"
+          >
+            Crear nueva caimana
+          </Link>
+          <div className="flex gap-4 text-sm">
+            <Link href="/partidos" className="font-medium text-green-700 hover:underline">
+              Ver partidos
             </Link>
-            .
-          </p>
+            <Link href="/canchas" className="font-medium text-green-700 hover:underline">
+              Ver canchas
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="mt-6 flex gap-3">

@@ -13,14 +13,14 @@ export default async function NuevoPartidoPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-12">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <h1 className="mb-6 text-2xl font-semibold tracking-tight text-zinc-900">
           Armar partido
         </h1>
 
         {courts.length === 0 ? (
           <p className="rounded-md border border-zinc-200 bg-white px-4 py-6 text-center text-sm text-zinc-500">
-            Todavía no hay canchas cargadas. Agrega una cancha primero.
+            Todavía no hay canchas disponibles. Pronto el administrador cargará canchas.
           </p>
         ) : (
           <CreateMatchForm courts={courts} />

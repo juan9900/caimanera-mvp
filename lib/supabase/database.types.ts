@@ -1,6 +1,3 @@
-// Auto-generated via mcp__supabase__generate_typescript_types. Do not hand-edit;
-// regenerate after schema migrations instead.
-
 export type Json =
   | string
   | number
@@ -58,48 +55,6 @@ export type Database = {
           {
             foreignKeyName: "courts_added_by_fkey"
             columns: ["added_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      invitations: {
-        Row: {
-          code: string
-          created_at: string
-          created_by: string
-          id: string
-          used_at: string | null
-          used_by: string | null
-        }
-        Insert: {
-          code?: string
-          created_at?: string
-          created_by: string
-          id?: string
-          used_at?: string | null
-          used_by?: string | null
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          used_at?: string | null
-          used_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invitations_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invitations_used_by_fkey"
-            columns: ["used_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -202,14 +157,52 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string
           id: string
           invited_by: string | null
+          is_admin: boolean
           name: string | null
+          notification_scopes: string[]
           phone: string | null
           photo_url: string | null
+          referral_code: string
           sport_preferences: string[]
           vibe: Database["public"]["Enums"]["vibe_type"]
           zone: string | null
@@ -218,9 +211,12 @@ export type Database = {
           created_at?: string
           id: string
           invited_by?: string | null
+          is_admin?: boolean
           name?: string | null
+          notification_scopes?: string[]
           phone?: string | null
           photo_url?: string | null
+          referral_code?: string
           sport_preferences?: string[]
           vibe?: Database["public"]["Enums"]["vibe_type"]
           zone?: string | null
@@ -229,9 +225,12 @@ export type Database = {
           created_at?: string
           id?: string
           invited_by?: string | null
+          is_admin?: boolean
           name?: string | null
+          notification_scopes?: string[]
           phone?: string | null
           photo_url?: string | null
+          referral_code?: string
           sport_preferences?: string[]
           vibe?: Database["public"]["Enums"]["vibe_type"]
           zone?: string | null
@@ -251,11 +250,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_admin: { Args: never; Returns: boolean }
       is_direct_network: {
         Args: { candidate: string; organizer: string }
         Returns: boolean
       }
-      validate_invite_code: { Args: { p_code: string }; Returns: boolean }
+      resolve_audience_subscriptions: {
+        Args: { p_match_id: string; p_scope: string }
+        Returns: {
+          auth: string
+          endpoint: string
+          p256dh: string
+          subscription_id: string
+        }[]
+      }
+      user_is_confirmed_in_match: {
+        Args: { p_match_id: string }
+        Returns: boolean
+      }
+      user_is_match_organizer: {
+        Args: { p_match_id: string }
+        Returns: boolean
+      }
+      user_is_match_participant: {
+        Args: { p_match_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       joined_via_type: "red_directa" | "externo"

@@ -41,6 +41,9 @@ export type LoginFormState =
 
 export const SPORT_OPTIONS = ["futbol", "tenis"] as const;
 
+export const NOTIFICATION_SCOPE_OPTIONS = ["red", "amigos", "canchas"] as const;
+export type NotificationScope = (typeof NOTIFICATION_SCOPE_OPTIONS)[number];
+
 export const OnboardingFormSchema = z.object({
   name: z.string().trim().min(2, { error: "Ingresa tu nombre." }),
   zone: z.string().trim().min(2, { error: "Ingresa tu zona en Maracaibo." }),
@@ -50,6 +53,7 @@ export const OnboardingFormSchema = z.object({
   vibe: z.enum(["relajado", "competitivo"], {
     error: "Elige una vibra.",
   }),
+  notificationScopes: z.array(z.enum(NOTIFICATION_SCOPE_OPTIONS)).default([]),
 });
 
 export type OnboardingFormState =
@@ -59,7 +63,10 @@ export type OnboardingFormState =
         zone?: string[];
         sportPreferences?: string[];
         vibe?: string[];
+        notificationScopes?: string[];
       };
       message?: string;
     }
   | undefined;
+
+export const NotificationScopesSchema = z.array(z.enum(NOTIFICATION_SCOPE_OPTIONS));

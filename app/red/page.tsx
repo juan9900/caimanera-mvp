@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import {
   verifySession,
   getCurrentUserProfile,
   getMyInvitees,
   getMyInviter,
 } from "@/lib/auth/dal";
+import { CopyInviteLink } from "@/components/copy-invite-link";
 
 export default async function RedPage() {
   const session = await verifySession();
@@ -50,18 +50,20 @@ export default async function RedPage() {
           </div>
         </section>
 
+        <section className="mb-8">
+          <h2 className="mb-2 text-sm font-medium text-zinc-700">
+            Tu link de invitación
+          </h2>
+          <p className="mb-2 text-sm text-zinc-500">
+            Es fijo y podés compartirlo con quien quieras, las veces que quieras.
+          </p>
+          <CopyInviteLink referralCode={profile.referral_code} />
+        </section>
+
         <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-medium text-zinc-700">
-              Quién invitaste ({invitees.length})
-            </h2>
-            <Link
-              href="/invitaciones"
-              className="text-sm text-green-700 hover:underline"
-            >
-              Invitar a alguien
-            </Link>
-          </div>
+          <h2 className="mb-2 text-sm font-medium text-zinc-700">
+            Quién invitaste ({invitees.length})
+          </h2>
           <ul className="divide-y divide-zinc-200 rounded-md border border-zinc-200 bg-white">
             {invitees.length === 0 && (
               <li className="px-4 py-6 text-center text-sm text-zinc-500">

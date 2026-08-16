@@ -1,6 +1,12 @@
 import { SignupForm } from "./signup-form";
 
-export default function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ref?: string }>;
+}) {
+  const { ref } = await searchParams;
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-12">
       <h1 className="mb-2 text-2xl font-semibold tracking-tight text-zinc-900">
@@ -9,7 +15,7 @@ export default function SignupPage() {
       <p className="mb-8 max-w-sm text-center text-zinc-600">
         Necesitás un código de invitación de alguien de la red para unirte.
       </p>
-      <SignupForm />
+      <SignupForm defaultInviteCode={ref} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { verifySession, requireSession, getCurrentUserProfile } from "@/lib/auth/dal";
+import { verifySession, requireSession, getCurrentUserProfile, getIsAdmin, requireAdmin } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 
 jest.mock("@/lib/supabase/server", () => ({
@@ -85,5 +85,64 @@ describe("getCurrentUserProfile", () => {
     );
 
     await expect(getCurrentUserProfile()).resolves.toEqual(profile);
+  });
+});
+
+describe("getIsAdmin", () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it("returns false when the profile has no is_admin flag", async () => {
+    const profile = { id: "user-1", name: "Juan", is_admin: false };
+    mockCreateClient.mockResolvedValue(
+      mockSupabaseClient({ user: { id: "user-1", email: null }, profile })
+    );
+
+    await expect(getIsAdmin()).resolves.toBe(false);
+  });
+
+  it("returns true when the profile has is_admin set", async () => {
+    const profile = { id: "user-1", name: "Juan", is_admin: true };
+    mockCreateClient.mockResolvedValue(
+      mockSupabaseClient({ user: { id: "user-1", email: null }, profile })
+    );
+
+    await expect(getIsAdmin()).resolves.toBe(true);
+  });
+
+  it("returns false when there is no session", async () => {
+    mockCreateClient.mockResolvedValue(mockSupabaseClient({ user: null }));
+
+    await expect(getIsAdmin()).resolves.toBe(false);
+  });
+});
+
+describe("requireAdmin", () => {
+  afterEach(() => jest.clearAllMocks());
+
+  it("throws when there is no session", async () => {
+    mockCreateClient.mockResolvedValue(mockSupabaseClient({ user: null }));
+
+    await expect(requireAdmin()).rejects.toThrow("No autenticado");
+  });
+
+  it("throws when the user isn't an admin", async () => {
+    const profile = { id: "user-1", name: "Juan", is_admin: false };
+    mockCreateClient.mockResolvedValue(
+      mockSupabaseClient({ user: { id: "user-1", email: null }, profile })
+    );
+
+    await expect(requireAdmin()).rejects.toThrow("No autorizado");
+  });
+
+  it("resolves the session when the user is an admin", async () => {
+    const profile = { id: "user-1", name: "Juan", is_admin: true };
+    mockCreateClient.mockResolvedValue(
+      mockSupabaseClient({ user: { id: "user-1", email: null }, profile })
+    );
+
+    await expect(requireAdmin()).resolves.toEqual({
+      userId: "user-1",
+      email: null,
+    });
   });
 });

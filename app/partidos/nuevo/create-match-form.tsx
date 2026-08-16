@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { useActionState } from "react";
 import { createMatch } from "@/app/actions/matches";
+import { CourtPickerMap } from "@/components/court-picker-map";
 import type { Court } from "@/lib/auth/dal";
 
 export function CreateMatchForm({ courts }: { courts: Court[] }) {
   const [state, action, pending] = useActionState(createMatch, undefined);
+  const [courtId, setCourtId] = useState("");
+  const mappableCourts = courts.filter((c) => c.lat != null && c.lng != null);
 
   return (
     <form action={action} className="w-full space-y-5">
@@ -13,10 +17,23 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
         <label htmlFor="courtId" className="block text-sm font-medium text-zinc-700">
           Cancha
         </label>
+        {mappableCourts.length > 0 && (
+          <div className="mt-1 mb-3">
+            <CourtPickerMap
+              courts={mappableCourts}
+              selectedId={courtId || null}
+              onSelect={setCourtId}
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              Toca un marcador para elegir la cancha oficial.
+            </p>
+          </div>
+        )}
         <select
           id="courtId"
           name="courtId"
-          defaultValue=""
+          value={courtId}
+          onChange={(e) => setCourtId(e.target.value)}
           className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
         >
           <option value="" disabled>
@@ -25,6 +42,7 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
           {courts.map((court) => (
             <option key={court.id} value={court.id}>
               {court.name}
+              {court.is_official ? " (Oficial)" : ""}
             </option>
           ))}
         </select>

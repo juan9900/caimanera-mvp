@@ -15,21 +15,13 @@ export default async function CanchasPage() {
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-12">
       <div className="w-full max-w-2xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            Canchas
-          </h1>
-          <Link
-            href="/canchas/nueva"
-            className="rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"
-          >
-            Agregar cancha
-          </Link>
-        </div>
+        <h1 className="mb-6 text-2xl font-semibold tracking-tight text-zinc-900">
+          Canchas
+        </h1>
 
         {courts.length === 0 ? (
           <p className="rounded-md border border-zinc-200 bg-white px-4 py-6 text-center text-sm text-zinc-500">
-            Todavía no hay canchas cargadas. Agrega la primera.
+            Todavía no hay canchas cargadas.
           </p>
         ) : (
           <>

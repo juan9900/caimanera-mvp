@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { verifySession, getCurrentUserProfile } from "@/lib/auth/dal";
+import { verifySession, getCurrentUserProfile, getIsAdmin } from "@/lib/auth/dal";
 import { AddCourtForm } from "./add-court-form";
 
 export default async function NuevaCanchaPage() {
@@ -8,6 +8,9 @@ export default async function NuevaCanchaPage() {
 
   const profile = await getCurrentUserProfile();
   if (!profile?.name) redirect("/onboarding");
+
+  const isAdmin = await getIsAdmin();
+  if (!isAdmin) redirect("/");
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-12">

@@ -3,7 +3,6 @@
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import Link from "next/link";
 
 // Served from /public so the URL is a plain string, independent of how the
 // bundler handles image imports from inside node_modules.
@@ -17,9 +16,28 @@ const courtIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-export type CourtMarker = { id: string; name: string; lat: number; lng: number };
+const selectedCourtIcon = L.icon({
+  iconUrl: "/leaflet/marker-icon.png",
+  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+  shadowUrl: "/leaflet/marker-shadow.png",
+  iconSize: [33, 54],
+  iconAnchor: [16, 54],
+  popupAnchor: [1, -44],
+  shadowSize: [54, 54],
+  className: "hue-rotate-90",
+});
 
-export function CourtsMapInner({ courts }: { courts: CourtMarker[] }) {
+export type CourtPickerMarker = { id: string; name: string; lat: number; lng: number };
+
+export function CourtPickerMapInner({
+  courts,
+  selectedId,
+  onSelect,
+}: {
+  courts: CourtPickerMarker[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
   const center: [number, number] = [courts[0].lat, courts[0].lng];
 
   return (
@@ -34,10 +52,13 @@ export function CourtsMapInner({ courts }: { courts: CourtMarker[] }) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {courts.map((court) => (
-        <Marker key={court.id} position={[court.lat, court.lng]} icon={courtIcon}>
-          <Popup>
-            <Link href={`/canchas/${court.id}`}>{court.name}</Link>
-          </Popup>
+        <Marker
+          key={court.id}
+          position={[court.lat, court.lng]}
+          icon={court.id === selectedId ? selectedCourtIcon : courtIcon}
+          eventHandlers={{ click: () => onSelect(court.id) }}
+        >
+          <Popup>{court.name}</Popup>
         </Marker>
       ))}
     </MapContainer>

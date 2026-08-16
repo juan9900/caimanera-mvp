@@ -14,8 +14,17 @@ export async function SiteHeader() {
 
       {session ? (
         <nav className="flex items-center gap-4 text-sm">
+          <Link href="/canchas" className="text-zinc-700 hover:text-green-700">
+            Canchas
+          </Link>
+          <Link href="/partidos" className="text-zinc-700 hover:text-green-700">
+            Partidos
+          </Link>
           <Link href="/invitaciones" className="text-zinc-700 hover:text-green-700">
             Invitaciones
+          </Link>
+          <Link href="/red" className="text-zinc-700 hover:text-green-700">
+            Mi red
           </Link>
           <span className="text-zinc-500">{profile?.name ?? session.email}</span>
           <form action={logout}>

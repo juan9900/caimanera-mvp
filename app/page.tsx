@@ -18,10 +18,16 @@ export default async function Home() {
       </p>
 
       {profile ? (
-        <p className="mt-6 text-zinc-700">
-          ¡Bienvenido de vuelta, {profile.name}! Todavía no hay partidos ni
-          canchas cargados — eso llega en la próxima fase.
-        </p>
+        <div className="mt-6 text-zinc-700">
+          <p>¡Bienvenido de vuelta, {profile.name}!</p>
+          <p className="mt-2">
+            Todavía no hay partidos, pero ya puedes{" "}
+            <Link href="/canchas" className="font-medium text-green-700 hover:underline">
+              ver las canchas
+            </Link>
+            .
+          </p>
+        </div>
       ) : (
         <div className="mt-6 flex gap-3">
           <Link

@@ -53,6 +53,109 @@ export const getCurrentUserProfile = cache(
   }
 );
 
+export type Court = Tables<"courts">;
+
+/** Fetches all courts visible to the current user, alphabetically. */
+export const getCourts = cache(async (): Promise<Court[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase.from("courts").select("*").order("name");
+
+  return data ?? [];
+});
+
+/** Fetches a single court by id, if visible to the current user. */
+export const getCourt = cache(async (id: string): Promise<Court | null> => {
+  const session = await verifySession();
+  if (!session) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("courts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  return data;
+});
+
+export type Match = Tables<"matches">;
+export type MatchWithCourt = Match & {
+  court: Pick<Court, "id" | "name"> | null;
+  organizer: { name: string | null } | null;
+};
+
+/** Fetches open matches, soonest first, with court and organizer names. */
+export const getOpenMatches = cache(async (): Promise<MatchWithCourt[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("matches")
+    .select("*, court:courts(id, name), organizer:users!matches_organizer_id_fkey(name)")
+    .eq("status", "abierto")
+    .order("datetime");
+
+  return (data as MatchWithCourt[] | null) ?? [];
+});
+
+/** Fetches a single match by id, with court and organizer names, if visible to the current user. */
+export const getMatch = cache(async (id: string): Promise<MatchWithCourt | null> => {
+  const session = await verifySession();
+  if (!session) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("matches")
+    .select("*, court:courts(id, name), organizer:users!matches_organizer_id_fkey(name)")
+    .eq("id", id)
+    .maybeSingle();
+
+  return data as MatchWithCourt | null;
+});
+
+export type MatchParticipant = Tables<"match_participants"> & {
+  user: { name: string | null } | null;
+};
+
+/** Fetches participants of a match, most recently joined first. */
+export const getMatchParticipants = cache(
+  async (matchId: string): Promise<MatchParticipant[]> => {
+    const session = await verifySession();
+    if (!session) return [];
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("match_participants")
+      .select("*, user:users(name)")
+      .eq("match_id", matchId)
+      .order("created_at", { ascending: false });
+
+    return (data as MatchParticipant[] | null) ?? [];
+  }
+);
+
+/** Fetches the current user's participation row for a match, if any. */
+export const getMyParticipation = cache(
+  async (matchId: string): Promise<Tables<"match_participants"> | null> => {
+    const session = await verifySession();
+    if (!session) return null;
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("match_participants")
+      .select("*")
+      .eq("match_id", matchId)
+      .eq("user_id", session.userId)
+      .maybeSingle();
+
+    return data;
+  }
+);
+
 export type Invitation = Tables<"invitations">;
 
 /** Fetches invitations created by the current user, most recent first. */

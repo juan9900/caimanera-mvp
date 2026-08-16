@@ -172,3 +172,35 @@ export const getOwnInvitations = cache(async (): Promise<Invitation[]> => {
 
   return data ?? [];
 });
+
+export type NetworkUser = Pick<UserProfile, "id" | "name" | "zone" | "created_at">;
+
+/** Fetches the users the current user invited directly (their `invited_by`), most recent first. */
+export const getMyInvitees = cache(async (): Promise<NetworkUser[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("users")
+    .select("id, name, zone, created_at")
+    .eq("invited_by", session.userId)
+    .order("created_at", { ascending: false });
+
+  return data ?? [];
+});
+
+/** Fetches the user who invited the current user, if any. */
+export const getMyInviter = cache(async (): Promise<NetworkUser | null> => {
+  const profile = await getCurrentUserProfile();
+  if (!profile?.invited_by) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("users")
+    .select("id, name, zone, created_at")
+    .eq("id", profile.invited_by)
+    .maybeSingle();
+
+  return data;
+});

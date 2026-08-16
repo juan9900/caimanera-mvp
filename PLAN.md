@@ -31,33 +31,41 @@ Objetivo: alguien con un código de invitación puede entrar, autenticarse y com
 
 Pendiente para más adelante: confirmar en un entorno real que el flujo de signup completa el envío de email de confirmación (no se pudo verificar en vivo en esta sesión por el rate limit del mailer por defecto de un proyecto Supabase recién creado); considerar edición de perfil post-onboarding.
 
-## Fase 2 — Canchas
+## Fase 2 — Canchas (hecho)
 
 Objetivo: existe un catálogo de canchas reales para poder armar partidos ahí.
 
-- Listado de canchas (server component, fetch directo a `courts`).
-- Mapa con `react-leaflet` mostrando canchas por lat/lng.
-- Detalle de cancha (horario, teléfono de contacto, fotos, si es oficial).
-- Formulario para agregar cancha nueva (`added_by` = usuario actual).
+- Listado de canchas (`/canchas`, server component, fetch directo a `courts` vía `getCourts` en el DAL).
+- Mapa con `react-leaflet` mostrando canchas por lat/lng (`components/courts-map-inner.tsx`), cargado sin SSR desde un wrapper cliente (`components/courts-map.tsx`) porque `leaflet` toca `window` al importarse.
+- Detalle de cancha (`/canchas/[id]`): horario, teléfono de contacto, si es oficial.
+- Formulario para agregar cancha nueva (`/canchas/nueva`, Server Action `createCourt`, `added_by` = usuario actual). Validación con Zod (`lib/courts/definitions.ts`).
+- Ajuste de RLS: la política de `SELECT` sobre `courts` heredada de Fase 0 solo dejaba ver canchas oficiales, propias, o ligadas a un partido — lo que rompía el catálogo compartido (canchas no oficiales de otros eran invisibles hasta que existiera un partido ahí). Se abrió a cualquier usuario autenticado (migración `open_courts_select_to_network`), razonable porque la red ya es cerrada por invitación.
+- Fotos de cancha (`photos`) quedan pendientes — no había forma de subir archivos aún en el DAL/UI.
 
-## Fase 3 — Partidos
+Pendiente para más adelante: no se pudo verificar el flujo completo en vivo (signup → agregar cancha) en esta sesión por el mismo rate limit del mailer de Supabase mencionado en Fase 1. Se verificó con `next build`, typecheck, lint, tests unitarios, y un chequeo e2e de que las rutas protegidas redirigen a `/login` sin sesión.
+
+## Fase 3 — Partidos (hecho)
 
 Objetivo: organizar y unirse a caimaneras.
 
-- Crear partido: elegir cancha, deporte, fecha/hora, vibe, cupos totales (`organizer_id` = usuario actual).
-- Listado de partidos abiertos (filtrado por red directa vs. externos usando `is_direct_network`).
-- Unirse a un partido → inserta en `match_participants`, actualiza `slots_filled`.
-- Vista de detalle del partido: cupos, lista de confirmados, estado (`abierto`/`completo`/`cancelado`).
-- Cancelar partido / salir de un partido.
-- Cierre automático a `completo` cuando `slots_filled = total_slots`.
+- Crear partido (`/partidos/nuevo`): elegir cancha, deporte, fecha/hora, vibe, cupos totales (`organizer_id` = usuario actual). Server Action `createMatch` protegida con `requireSession`, validación con Zod (`lib/matches/definitions.ts`).
+- Listado de partidos abiertos (`/partidos`), ordenado por fecha, con cancha y organizador.
+- Unirse a un partido (`joinMatch`): el server action resuelve con la RPC `is_direct_network` si el cupo entra directo (`confirmado`/`red_directa`) o queda pendiente de aprobación (`pendiente`/`externo`) — la política RLS de `INSERT` en `match_participants` exige que la combinación coincida. `slots_filled` y el cierre automático a `completo` los recalcula un trigger (`recalc_match_slots`), ya existente desde la Fase 0; no hace falta tocarlo desde la app.
+- Vista de detalle del partido (`/partidos/[id]`): cupos, confirmados, solicitudes pendientes (si sos el organizador, con aprobar/rechazar), estado (`abierto`/`completo`/`cancelado`).
+- Organizador puede cancelar el partido o quitar un participante; cualquier participante puede salirse o cancelar su solicitud.
+- Todo el modelado (tablas, enums, RLS, RPC `is_direct_network`, trigger `recalc_match_slots`) ya estaba en la migración `initial_schema` de la Fase 0 — esta fase fue enteramente de capa de aplicación (DAL, Server Actions, UI).
 
-## Fase 4 — Red e invitaciones sociales
+Pendiente para más adelante: mismo problema de rate limit del mailer de Supabase para probar el flujo en vivo con dos usuarios reales (organizador + invitado externo). Se verificó con `next build`, typecheck, lint, tests unitarios, y que las rutas protegidas redirigen a `/login` sin sesión.
+
+## Fase 4 — Red e invitaciones sociales (hecho)
 
 Objetivo: la red de invitados influye en quién ve y prioriza qué partidos.
 
-- Distinguir en la UI cupos de red directa vs. externos (`joined_via_type`).
-- Vista de "mi red": quién invité, quién me invitó.
-- Compartir partido por link/WhatsApp para llenar cupos externos cuando la red directa no alcanza.
+- Badge de "Red directa" / "Externo" (`joined_via_type`) junto a cada participante confirmado o pendiente en el detalle del partido.
+- Vista "mi red" (`/red`): quién te invitó y a quién invitaste, resuelto por `invited_by` sobre `public.users` — la política de `SELECT` ya era abierta a cualquier usuario autenticado (Fase 2), así que no hizo falta tocar RLS. DAL: `getMyInvitees`, `getMyInviter`.
+- Botón "Compartir" en el detalle del partido (`components/share-match-button.tsx`, client component): usa `navigator.share` si está disponible y si no cae a un link de `wa.me` con el texto armado en el cliente (necesita `window.location`, por eso no puede ser server component).
+
+Pendiente para más adelante: mismo problema de rate limit del mailer de Supabase para probar en vivo con dos usuarios reales compartiendo/uniéndose por WhatsApp. Se verificó con `next build`, typecheck, lint y tests unitarios.
 
 ## Fase 5 — Pulido y lanzamiento
 

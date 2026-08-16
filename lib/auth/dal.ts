@@ -52,3 +52,20 @@ export const getCurrentUserProfile = cache(
     return data;
   }
 );
+
+export type Invitation = Tables<"invitations">;
+
+/** Fetches invitations created by the current user, most recent first. */
+export const getOwnInvitations = cache(async (): Promise<Invitation[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("invitations")
+    .select("*")
+    .eq("created_by", session.userId)
+    .order("created_at", { ascending: false });
+
+  return data ?? [];
+});

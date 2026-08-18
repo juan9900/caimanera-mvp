@@ -20,67 +20,63 @@ export default async function RedPage() {
   ]);
 
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-12">
-      <div className="w-full max-w-md">
-        <h1 className="mb-2 text-2xl font-semibold tracking-tight text-zinc-900">
-          Mi red
-        </h1>
-        <p className="mb-6 text-zinc-600">
-          Tu red directa influye en qué partidos ves confirmados de una y
-          cuáles quedan pendientes de aprobación.
+    <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
+      <h1 className="mb-2 font-display text-2xl font-bold">Mi red</h1>
+      <p className="mb-6 font-body text-on-surface-variant">
+        Tu red directa influye en qué partidos ves confirmados de una y
+        cuáles quedan pendientes de aprobación.
+      </p>
+
+      <section className="mb-8">
+        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
+          Quién te invitó
+        </h2>
+        <div className="rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
+          {inviter ? (
+            <p className="font-body text-on-surface">
+              {inviter.name ?? "Jugador"}
+              {inviter.zone && (
+                <span className="text-on-surface-variant"> · {inviter.zone}</span>
+              )}
+            </p>
+          ) : (
+            <p className="font-body text-sm text-on-surface-variant">
+              Entraste como fundador, sin invitación.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
+          Tu link de invitación
+        </h2>
+        <p className="mb-2 font-body text-sm text-on-surface-variant">
+          Es fijo y podés compartirlo con quien quieras, las veces que quieras.
         </p>
+        <CopyInviteLink referralCode={profile.referral_code} />
+      </section>
 
-        <section className="mb-8">
-          <h2 className="mb-2 text-sm font-medium text-zinc-700">
-            Quién te invitó
-          </h2>
-          <div className="rounded-md border border-zinc-200 bg-white px-4 py-3">
-            {inviter ? (
-              <p className="text-zinc-900">
-                {inviter.name ?? "Jugador"}
-                {inviter.zone && (
-                  <span className="text-zinc-500"> · {inviter.zone}</span>
-                )}
-              </p>
-            ) : (
-              <p className="text-sm text-zinc-500">
-                Entraste como fundador, sin invitación.
-              </p>
-            )}
-          </div>
-        </section>
-
-        <section className="mb-8">
-          <h2 className="mb-2 text-sm font-medium text-zinc-700">
-            Tu link de invitación
-          </h2>
-          <p className="mb-2 text-sm text-zinc-500">
-            Es fijo y podés compartirlo con quien quieras, las veces que quieras.
-          </p>
-          <CopyInviteLink referralCode={profile.referral_code} />
-        </section>
-
-        <section>
-          <h2 className="mb-2 text-sm font-medium text-zinc-700">
-            Quién invitaste ({invitees.length})
-          </h2>
-          <ul className="divide-y divide-zinc-200 rounded-md border border-zinc-200 bg-white">
-            {invitees.length === 0 && (
-              <li className="px-4 py-6 text-center text-sm text-zinc-500">
-                Todavía no invitaste a nadie de tu red directa.
-              </li>
-            )}
-            {invitees.map((user) => (
-              <li key={user.id} className="px-4 py-3">
-                <p className="text-zinc-900">{user.name ?? "Jugador"}</p>
-                {user.zone && (
-                  <p className="text-sm text-zinc-500">{user.zone}</p>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
+      <section>
+        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
+          Quién invitaste ({invitees.length})
+        </h2>
+        <ul className="flex flex-col gap-2">
+          {invitees.length === 0 && (
+            <li className="rounded-xl border border-dashed border-surface-variant px-4 py-6 text-center font-body text-sm text-on-surface-variant">
+              Todavía no invitaste a nadie de tu red directa.
+            </li>
+          )}
+          {invitees.map((user) => (
+            <li key={user.id} className="rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
+              <p className="font-body text-on-surface">{user.name ?? "Jugador"}</p>
+              {user.zone && (
+                <p className="font-body text-sm text-on-surface-variant">{user.zone}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

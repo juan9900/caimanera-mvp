@@ -1,56 +1,23 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { verifySession, getCurrentUserProfile } from "@/lib/auth/dal";
+import {
+  verifySession,
+  getCurrentUserProfile,
+  getOpenMatchesWithCourtGeo,
+  getOfficialCourts,
+} from "@/lib/auth/dal";
+import { HomeClient } from "@/components/home/home-client";
 
 export default async function Home() {
   const session = await verifySession();
-  const profile = session ? await getCurrentUserProfile() : null;
+  if (!session) redirect("/login");
 
-  if (session && !profile?.name) redirect("/onboarding");
+  const profile = await getCurrentUserProfile();
+  if (!profile?.name) redirect("/onboarding");
 
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 text-center">
-      <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
-        Caimanera
-      </h1>
-      <p className="mt-3 max-w-md text-lg text-zinc-600">
-        Consigue jugadores para tu próxima caimanera en Maracaibo.
-      </p>
+  const [matches, officialCourts] = await Promise.all([
+    getOpenMatchesWithCourtGeo(),
+    getOfficialCourts(),
+  ]);
 
-      {profile ? (
-        <div className="mt-6 flex flex-col items-center gap-4">
-          <p className="text-zinc-700">¡Bienvenido de vuelta, {profile.name}!</p>
-          <Link
-            href="/partidos/nuevo"
-            className="rounded-md bg-green-600 px-6 py-3 text-lg font-medium text-white hover:bg-green-700"
-          >
-            Crear nueva caimana
-          </Link>
-          <div className="flex gap-4 text-sm">
-            <Link href="/partidos" className="font-medium text-green-700 hover:underline">
-              Ver partidos
-            </Link>
-            <Link href="/canchas" className="font-medium text-green-700 hover:underline">
-              Ver canchas
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-6 flex gap-3">
-          <Link
-            href="/signup"
-            className="rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700"
-          >
-            Crear cuenta
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-md border border-zinc-300 px-4 py-2 font-medium text-zinc-700 hover:bg-zinc-100"
-          >
-            Iniciar sesión
-          </Link>
-        </div>
-      )}
-    </div>
-  );
+  return <HomeClient matches={matches} officialCourts={officialCourts} />;
 }

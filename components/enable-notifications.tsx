@@ -51,7 +51,7 @@ export function EnableNotifications({ onEnabled }: { onEnabled?: () => void } = 
 
   if (status === "denied") {
     return (
-      <p className="text-xs text-zinc-500">
+      <p className="font-body text-xs text-on-surface-variant">
         Bloqueaste las notificaciones para este sitio. Actívalas desde los ajustes del navegador.
       </p>
     );
@@ -62,7 +62,7 @@ export function EnableNotifications({ onEnabled }: { onEnabled?: () => void } = 
       type="button"
       onClick={status === "enabled" ? disable : enable}
       disabled={pending}
-      className="text-xs font-medium text-green-700 hover:underline disabled:opacity-50"
+      className="font-label text-xs font-bold text-primary-lime hover:underline disabled:opacity-50"
     >
       {status === "enabled" ? "Desactivar notificaciones" : "Activar notificaciones"}
     </button>

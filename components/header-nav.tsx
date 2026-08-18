@@ -29,7 +29,7 @@ export function HeaderNav({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-xl text-zinc-700 md:hidden"
+        className="text-xl text-on-surface md:hidden"
         aria-label={open ? "Cerrar menú" : "Abrir menú"}
         aria-expanded={open}
       >
@@ -40,25 +40,25 @@ export function HeaderNav({
         {authed ? (
           <>
             {links.map((link) => (
-              <Link key={link.href} href={link.href} className="text-zinc-700 hover:text-green-700">
+              <Link key={link.href} href={link.href} className="text-on-surface-variant hover:text-primary-lime">
                 {link.label}
               </Link>
             ))}
-            <span className="text-zinc-500">{userLabel}</span>
+            <span className="text-on-surface-variant">{userLabel}</span>
             <form action={logout}>
-              <button type="submit" className="text-zinc-700 hover:text-green-700">
+              <button type="submit" className="text-on-surface-variant hover:text-primary-lime">
                 Cerrar sesión
               </button>
             </form>
           </>
         ) : (
           <>
-            <Link href="/login" className="text-zinc-700 hover:text-green-700">
+            <Link href="/login" className="text-on-surface-variant hover:text-primary-lime">
               Iniciar sesión
             </Link>
             <Link
               href="/signup"
-              className="rounded-md bg-green-600 px-3 py-1.5 font-medium text-white hover:bg-green-700"
+              className="rounded-md bg-primary-lime px-3 py-1.5 font-medium text-on-primary hover:brightness-95"
             >
               Crear cuenta
             </Link>
@@ -67,7 +67,7 @@ export function HeaderNav({
       </nav>
 
       {open && (
-        <nav className="absolute left-0 right-0 top-full z-10 flex flex-col gap-1 border-b border-zinc-200 bg-white px-6 py-3 text-sm md:hidden">
+        <nav className="absolute left-0 right-0 top-full z-10 flex flex-col gap-1 border-b border-outline-variant bg-surface px-6 py-3 text-sm md:hidden">
           {authed ? (
             <>
               {links.map((link) => (
@@ -75,14 +75,14 @@ export function HeaderNav({
                   key={link.href}
                   href={link.href}
                   onClick={() => setOpen(false)}
-                  className="py-1.5 text-zinc-700 hover:text-green-700"
+                  className="py-1.5 text-on-surface-variant hover:text-primary-lime"
                 >
                   {link.label}
                 </Link>
               ))}
-              <span className="py-1.5 text-zinc-500">{userLabel}</span>
+              <span className="py-1.5 text-on-surface-variant">{userLabel}</span>
               <form action={logout}>
-                <button type="submit" className="py-1.5 text-left text-zinc-700 hover:text-green-700">
+                <button type="submit" className="py-1.5 text-left text-on-surface-variant hover:text-primary-lime">
                   Cerrar sesión
                 </button>
               </form>
@@ -92,14 +92,14 @@ export function HeaderNav({
               <Link
                 href="/login"
                 onClick={() => setOpen(false)}
-                className="py-1.5 text-zinc-700 hover:text-green-700"
+                className="py-1.5 text-on-surface-variant hover:text-primary-lime"
               >
                 Iniciar sesión
               </Link>
               <Link
                 href="/signup"
                 onClick={() => setOpen(false)}
-                className="py-1.5 font-medium text-green-700"
+                className="py-1.5 font-medium text-primary-lime"
               >
                 Crear cuenta
               </Link>

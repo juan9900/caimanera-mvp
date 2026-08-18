@@ -12,20 +12,16 @@ export default async function NuevoPartidoPage() {
   const courts = await getCourts();
 
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-12">
-      <div className="w-full max-w-md">
-        <h1 className="mb-6 text-2xl font-semibold tracking-tight text-zinc-900">
-          Armar partido
-        </h1>
+    <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
+      <h1 className="mb-6 font-display text-2xl font-bold">Armar partido</h1>
 
-        {courts.length === 0 ? (
-          <p className="rounded-md border border-zinc-200 bg-white px-4 py-6 text-center text-sm text-zinc-500">
-            Todavía no hay canchas disponibles. Pronto el administrador cargará canchas.
-          </p>
-        ) : (
-          <CreateMatchForm courts={courts} />
-        )}
-      </div>
+      {courts.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-surface-variant px-4 py-8 text-center font-body text-on-surface-variant">
+          Todavía no hay canchas disponibles. Pronto el administrador cargará canchas.
+        </p>
+      ) : (
+        <CreateMatchForm courts={courts} />
+      )}
     </div>
   );
 }

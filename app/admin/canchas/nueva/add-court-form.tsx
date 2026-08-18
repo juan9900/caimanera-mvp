@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createCourt } from "@/app/actions/courts";
+import { CourtSponsorshipFields } from "@/components/courts/court-form-fields";
 
 export function AddCourtForm() {
   const [state, action, pending] = useActionState(createCourt, undefined);
@@ -82,6 +83,8 @@ export function AddCourtForm() {
           className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
         />
       </div>
+
+      <CourtSponsorshipFields errors={state?.errors} />
 
       {state?.message && <p className="text-sm text-red-600">{state.message}</p>}
 

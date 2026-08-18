@@ -20,14 +20,14 @@ export function CopyInviteLink({ referralCode }: { referralCode: string }) {
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-3">
-      <span ref={linkRef} className="flex-1 truncate font-mono text-sm text-zinc-900">
+    <div className="flex items-center gap-2 rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
+      <span ref={linkRef} className="flex-1 truncate font-label text-sm text-on-surface">
         {`/signup?ref=${referralCode}`}
       </span>
       <button
         type="button"
         onClick={handleCopy}
-        className="shrink-0 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+        className="shrink-0 rounded-lg bg-primary-lime px-3 py-1.5 font-label text-xs font-bold text-on-primary"
       >
         {copied ? "¡Copiado!" : "Copiar"}
       </button>

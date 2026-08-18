@@ -37,9 +37,9 @@ export function NotificationPreferences({
   }
 
   return (
-    <div className="rounded-md border border-zinc-200 bg-white p-4">
+    <div className="rounded-xl border border-surface-variant/50 bg-surface-container p-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-zinc-700">Notificaciones en este dispositivo</p>
+        <p className="font-body text-sm font-medium text-on-surface">Notificaciones en este dispositivo</p>
         <EnableNotifications
           onEnabled={() => {
             if (scopes.length === 0) {
@@ -50,27 +50,29 @@ export function NotificationPreferences({
       </div>
 
       <fieldset className="mt-4">
-        <legend className="block text-sm font-medium text-zinc-700">
+        <legend className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
           ¿Quiénes te pueden avisar?
         </legend>
-        <div className="mt-1 space-y-2">
-          <label className="flex items-center gap-2 text-zinc-700">
+        <div className="mt-2 space-y-2">
+          <label className="flex items-center gap-2 font-body text-on-surface">
             <input
               type="checkbox"
               checked={noNotifications}
               disabled={isPending}
               onChange={() => persist([])}
+              className="accent-primary-lime"
             />
             No quiero recibir notificaciones
           </label>
-          <div className="ml-1 space-y-1 border-l border-zinc-200 pl-3">
+          <div className="ml-1 space-y-1 border-l border-surface-variant pl-3">
             {NOTIFICATION_OPTIONS.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2 text-zinc-700">
+              <label key={opt.value} className="flex items-center gap-2 font-body text-on-surface">
                 <input
                   type="checkbox"
                   checked={scopes.includes(opt.value)}
                   disabled={isPending}
                   onChange={() => toggleScope(opt.value)}
+                  className="accent-primary-lime"
                 />
                 {opt.label}
               </label>
@@ -79,7 +81,7 @@ export function NotificationPreferences({
         </div>
       </fieldset>
 
-      {message && <p className="mt-3 text-xs text-zinc-500">{message}</p>}
+      {message && <p className="mt-3 font-body text-xs text-on-surface-variant">{message}</p>}
     </div>
   );
 }

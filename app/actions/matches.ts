@@ -23,13 +23,27 @@ export async function createMatch(
     datetime: formData.get("datetime"),
     vibe: formData.get("vibe"),
     totalSlots: formData.get("totalSlots"),
+    paymentBank: formData.get("paymentBank"),
+    paymentPhone: formData.get("paymentPhone"),
+    paymentCedula: formData.get("paymentCedula"),
+    paymentAmountBs: formData.get("paymentAmountBs"),
   });
 
   if (!validatedFields.success) {
     return { errors: validatedFields.error.flatten().fieldErrors };
   }
 
-  const { courtId, sport, datetime, vibe, totalSlots } = validatedFields.data;
+  const {
+    courtId,
+    sport,
+    datetime,
+    vibe,
+    totalSlots,
+    paymentBank,
+    paymentPhone,
+    paymentCedula,
+    paymentAmountBs,
+  } = validatedFields.data;
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -41,6 +55,10 @@ export async function createMatch(
       vibe,
       total_slots: totalSlots,
       organizer_id: session.userId,
+      payment_bank: paymentBank ?? null,
+      payment_phone: paymentPhone ?? null,
+      payment_cedula: paymentCedula ?? null,
+      payment_amount_bs: paymentAmountBs ?? null,
     })
     .select("id")
     .single();
@@ -48,6 +66,18 @@ export async function createMatch(
   if (error || !data) {
     return { message: "No se pudo crear el partido. Intenta de nuevo." };
   }
+
+  await supabase.from("match_participants").insert({
+    match_id: data.id,
+    user_id: session.userId,
+    status: "confirmado",
+    joined_via: "red_directa",
+  });
+
+  // Attribution for sponsored courts: a match created here is the conversion
+  // a court's monthly sponsorship is meant to earn. Best-effort — never block
+  // match creation on it.
+  await supabase.rpc("log_court_event", { p_court_id: courtId, p_type: "match_created" });
 
   redirect(`/partidos/${data.id}`);
 }
@@ -153,6 +183,60 @@ export async function cancelMatch(formData: FormData): Promise<MatchActionResult
 
   if (error) return { message: "No se pudo cancelar el partido. Intenta de nuevo." };
 
+  revalidatePath(`/partidos/${matchId}`);
+}
+
+/**
+ * Organizer reopens a match that auto-expired (status "vencido") to ask for
+ * more players. Keeps the original `datetime` (shown in red as "ya comenzó"
+ * on the home screen) and stamps `reopened_at` so the expiry cron job
+ * (`expire-started-matches`) gives it one more hour of visibility before
+ * expiring it again.
+ */
+export async function reopenMatch(formData: FormData): Promise<MatchActionResult> {
+  const session = await requireSession();
+  const matchId = formData.get("matchId");
+  if (typeof matchId !== "string") return;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("matches")
+    .update({ status: "abierto", reopened_at: new Date().toISOString() })
+    .eq("id", matchId)
+    .eq("organizer_id", session.userId)
+    .eq("status", "vencido");
+
+  if (error) return { message: "No se pudo reabrir el partido. Intenta de nuevo." };
+
+  revalidatePath("/");
+  revalidatePath("/partidos");
+  revalidatePath(`/partidos/${matchId}`);
+}
+
+/**
+ * Organizer toggles a match's visibility. Private matches are dropped from
+ * the home/`/partidos` listings (see `getOpenMatches*`) but the detail page
+ * stays reachable by direct link — join requests still go through the usual
+ * direct-network/pending flow, so "private" means "invite-only", not a
+ * separate access-control layer.
+ */
+export async function setMatchVisibility(formData: FormData): Promise<MatchActionResult> {
+  const session = await requireSession();
+  const matchId = formData.get("matchId");
+  const isPublic = formData.get("isPublic") === "true";
+  if (typeof matchId !== "string") return;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("matches")
+    .update({ is_public: isPublic })
+    .eq("id", matchId)
+    .eq("organizer_id", session.userId);
+
+  if (error) return { message: "No se pudo cambiar la visibilidad. Intenta de nuevo." };
+
+  revalidatePath("/");
+  revalidatePath("/partidos");
   revalidatePath(`/partidos/${matchId}`);
 }
 

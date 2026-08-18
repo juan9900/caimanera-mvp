@@ -39,7 +39,7 @@ export type LoginFormState =
     }
   | undefined;
 
-export const SPORT_OPTIONS = ["futbol", "tenis"] as const;
+export const SPORT_OPTIONS = ["futbol"] as const;
 
 export const NOTIFICATION_SCOPE_OPTIONS = ["red", "amigos", "canchas"] as const;
 export type NotificationScope = (typeof NOTIFICATION_SCOPE_OPTIONS)[number];

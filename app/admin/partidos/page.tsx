@@ -2,16 +2,18 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { verifySession, getCurrentUserProfile, getIsAdmin, getAllMatches } from "@/lib/auth/dal";
 
-const SPORT_LABELS: Record<string, string> = { futbol: "Fútbol", tenis: "Tenis" };
+const SPORT_LABELS: Record<string, string> = { futbol: "Fútbol" };
 const STATUS_LABELS: Record<string, string> = {
   abierto: "Abierto",
   completo: "Completo",
   cancelado: "Cancelado",
+  vencido: "Vencido",
 };
 const STATUS_STYLES: Record<string, string> = {
   abierto: "bg-green-100 text-green-700",
   completo: "bg-zinc-100 text-zinc-700",
   cancelado: "bg-red-100 text-red-700",
+  vencido: "bg-red-100 text-red-700",
 };
 
 export default async function AdminPartidosPage() {

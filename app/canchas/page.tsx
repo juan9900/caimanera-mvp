@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 import { verifySession, getCurrentUserProfile, getCourts } from "@/lib/auth/dal";
 import { CourtsMap } from "@/components/courts-map";
 
@@ -13,40 +14,39 @@ export default async function CanchasPage() {
   const courts = await getCourts();
 
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-12">
-      <div className="w-full max-w-2xl">
-        <h1 className="mb-6 text-2xl font-semibold tracking-tight text-zinc-900">
-          Canchas
-        </h1>
+    <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
+      <h1 className="mb-4 font-display text-2xl font-bold">Canchas</h1>
 
-        {courts.length === 0 ? (
-          <p className="rounded-md border border-zinc-200 bg-white px-4 py-6 text-center text-sm text-zinc-500">
-            Todavía no hay canchas cargadas.
-          </p>
-        ) : (
-          <>
-            <CourtsMap courts={courts} />
+      {courts.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-surface-variant px-4 py-8 text-center font-body text-on-surface-variant">
+          Todavía no hay canchas cargadas.
+        </p>
+      ) : (
+        <>
+          <CourtsMap courts={courts} />
 
-            <ul className="mt-8 divide-y divide-zinc-200 rounded-md border border-zinc-200 bg-white">
-              {courts.map((court) => (
-                <li key={court.id}>
-                  <Link
-                    href={`/canchas/${court.id}`}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50"
-                  >
-                    <span className="font-medium text-zinc-900">{court.name}</span>
-                    {court.is_official && (
-                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                        Oficial
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
+          <ul className="mt-6 flex flex-col gap-3">
+            {courts.map((court) => (
+              <li key={court.id}>
+                <Link
+                  href={`/canchas/${court.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-surface-variant/50 bg-surface-container p-4 transition-transform active:scale-[0.98]"
+                >
+                  <span className="flex items-center gap-2 font-body font-medium text-on-surface">
+                    <MapPin aria-hidden size={16} className="text-primary-lime" />
+                    {court.name}
+                  </span>
+                  {court.is_official && (
+                    <span className="rounded-full bg-secondary-container/30 px-2 py-0.5 font-label text-xs font-bold text-primary-lime">
+                      Oficial
+                    </span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

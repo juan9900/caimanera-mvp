@@ -38,21 +38,32 @@ export default async function AdminCanchasPage() {
               Todavía no hay canchas cargadas.
             </li>
           )}
-          {courts.map((court) => (
-            <li key={court.id}>
-              <Link
-                href={`/canchas/${court.id}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50"
-              >
-                <span className="font-medium text-zinc-900">{court.name}</span>
-                {court.is_official && (
-                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                    Oficial
-                  </span>
-                )}
-              </Link>
-            </li>
-          ))}
+          {courts.map((court) => {
+            const sponsored = court.sponsored_until != null && new Date(court.sponsored_until) > new Date();
+            return (
+              <li key={court.id} className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50">
+                <Link href={`/canchas/${court.id}`} className="flex items-center gap-2">
+                  <span className="font-medium text-zinc-900">{court.name}</span>
+                  {court.is_official && (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                      Oficial
+                    </span>
+                  )}
+                  {sponsored && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      Patrocinada
+                    </span>
+                  )}
+                </Link>
+                <Link
+                  href={`/admin/canchas/${court.id}/editar`}
+                  className="text-xs font-medium text-green-700 hover:underline"
+                >
+                  Editar
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

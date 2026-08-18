@@ -14,42 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      court_events: {
+        Row: {
+          court_id: string
+          created_at: string
+          id: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          court_id: string
+          created_at?: string
+          id?: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          court_id?: string
+          created_at?: string
+          id?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_events_court_id_fkey"
+            columns: ["court_id"]
+            isOneToOne: false
+            referencedRelation: "courts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "court_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courts: {
         Row: {
           added_by: string
+          amenities: string[]
+          booking_url: string | null
           contact_phone: string | null
           created_at: string
           id: string
           is_official: boolean
           lat: number
           lng: number
+          logo_url: string | null
           name: string
           photos: string[] | null
+          promo_code: string | null
+          promo_expires_at: string | null
+          promo_text: string | null
           schedule: string | null
+          sponsor_priority: number
+          sponsored_until: string | null
+          whatsapp_url: string | null
         }
         Insert: {
           added_by: string
+          amenities?: string[]
+          booking_url?: string | null
           contact_phone?: string | null
           created_at?: string
           id?: string
           is_official?: boolean
           lat: number
           lng: number
+          logo_url?: string | null
           name: string
           photos?: string[] | null
+          promo_code?: string | null
+          promo_expires_at?: string | null
+          promo_text?: string | null
           schedule?: string | null
+          sponsor_priority?: number
+          sponsored_until?: string | null
+          whatsapp_url?: string | null
         }
         Update: {
           added_by?: string
+          amenities?: string[]
+          booking_url?: string | null
           contact_phone?: string | null
           created_at?: string
           id?: string
           is_official?: boolean
           lat?: number
           lng?: number
+          logo_url?: string | null
           name?: string
           photos?: string[] | null
+          promo_code?: string | null
+          promo_expires_at?: string | null
+          promo_text?: string | null
           schedule?: string | null
+          sponsor_priority?: number
+          sponsored_until?: string | null
+          whatsapp_url?: string | null
         }
         Relationships: [
           {
@@ -109,7 +175,13 @@ export type Database = {
           created_at: string
           datetime: string
           id: string
+          is_public: boolean
           organizer_id: string
+          payment_amount_bs: number | null
+          payment_bank: string | null
+          payment_cedula: string | null
+          payment_phone: string | null
+          reopened_at: string | null
           slots_filled: number
           sport: string
           status: Database["public"]["Enums"]["match_status"]
@@ -121,7 +193,13 @@ export type Database = {
           created_at?: string
           datetime: string
           id?: string
+          is_public?: boolean
           organizer_id: string
+          payment_amount_bs?: number | null
+          payment_bank?: string | null
+          payment_cedula?: string | null
+          payment_phone?: string | null
+          reopened_at?: string | null
           slots_filled?: number
           sport: string
           status?: Database["public"]["Enums"]["match_status"]
@@ -133,7 +211,13 @@ export type Database = {
           created_at?: string
           datetime?: string
           id?: string
+          is_public?: boolean
           organizer_id?: string
+          payment_amount_bs?: number | null
+          payment_bank?: string | null
+          payment_cedula?: string | null
+          payment_phone?: string | null
+          reopened_at?: string | null
           slots_filled?: number
           sport?: string
           status?: Database["public"]["Enums"]["match_status"]
@@ -255,6 +339,10 @@ export type Database = {
         Args: { candidate: string; organizer: string }
         Returns: boolean
       }
+      log_court_event: {
+        Args: { p_court_id: string; p_type: string }
+        Returns: undefined
+      }
       resolve_audience_subscriptions: {
         Args: { p_match_id: string; p_scope: string }
         Returns: {
@@ -279,7 +367,7 @@ export type Database = {
     }
     Enums: {
       joined_via_type: "red_directa" | "externo"
-      match_status: "abierto" | "completo" | "cancelado"
+      match_status: "abierto" | "completo" | "cancelado" | "vencido"
       participant_status: "confirmado" | "pendiente" | "rechazado"
       vibe_type: "relajado" | "competitivo"
     }
@@ -410,7 +498,7 @@ export const Constants = {
   public: {
     Enums: {
       joined_via_type: ["red_directa", "externo"],
-      match_status: ["abierto", "completo", "cancelado"],
+      match_status: ["abierto", "completo", "cancelado", "vencido"],
       participant_status: ["confirmado", "pendiente", "rechazado"],
       vibe_type: ["relajado", "competitivo"],
     },

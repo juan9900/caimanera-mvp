@@ -10,48 +10,48 @@ export function LoginForm() {
   return (
     <form action={action} className="w-full max-w-sm space-y-4">
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
+        <label htmlFor="email" className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
           Email
         </label>
         <input
           id="email"
           name="email"
           type="email"
-          className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
+          className="mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface focus:border-primary-lime focus:outline-none"
         />
         {state?.errors?.email && (
-          <p className="mt-1 text-sm text-red-600">{state.errors.email[0]}</p>
+          <p className="mt-1 font-body text-sm text-dark-error">{state.errors.email[0]}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
+        <label htmlFor="password" className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
           Contraseña
         </label>
         <input
           id="password"
           name="password"
           type="password"
-          className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
+          className="mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface focus:border-primary-lime focus:outline-none"
         />
         {state?.errors?.password && (
-          <p className="mt-1 text-sm text-red-600">{state.errors.password[0]}</p>
+          <p className="mt-1 font-body text-sm text-dark-error">{state.errors.password[0]}</p>
         )}
       </div>
 
-      {state?.message && <p className="text-sm text-red-600">{state.message}</p>}
+      {state?.message && <p className="font-body text-sm text-dark-error">{state.message}</p>}
 
       <button
         disabled={pending}
         type="submit"
-        className="w-full rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 disabled:opacity-50"
+        className="w-full rounded-lg bg-primary-lime px-4 py-2.5 font-display text-sm font-bold uppercase tracking-wide text-on-primary shadow-[0_4px_12px_rgba(195,244,0,0.2)] disabled:opacity-50"
       >
         {pending ? "Ingresando..." : "Ingresar"}
       </button>
 
-      <p className="text-center text-sm text-zinc-600">
+      <p className="text-center font-body text-sm text-on-surface-variant">
         ¿No tenés cuenta?{" "}
-        <Link href="/signup" className="text-green-700 underline">
+        <Link href="/signup" className="text-primary-lime underline">
           Regístrate con invitación
         </Link>
       </p>

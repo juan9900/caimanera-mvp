@@ -37,7 +37,7 @@ export function MatchActionForm({
           {isPending ? (pendingLabel ?? label) : label}
         </button>
       </form>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 font-body text-xs text-dark-error">{error}</p>}
     </div>
   );
 }

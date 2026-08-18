@@ -7,7 +7,7 @@ export const CourtsMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-80 w-full animate-pulse rounded-md bg-zinc-200" />
+      <div className="h-80 w-full animate-pulse rounded-xl bg-surface-container" />
     ),
   }
 );

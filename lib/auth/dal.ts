@@ -2,6 +2,8 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
+import type { HomeCourt, HomeMatch } from "@/lib/matches/home";
+import { sortCourtsForPicker } from "@/lib/courts/sort";
 
 export type Session = {
   userId: string;
@@ -87,7 +89,11 @@ export type MatchWithCourt = Match & {
   organizer: { name: string | null } | null;
 };
 
-/** Fetches open matches, soonest first, with court and organizer names. */
+/**
+ * Fetches open matches, soonest first, with court and organizer names.
+ * Private matches (`is_public = false`) are excluded — they're only reachable
+ * by direct link (invitation), not through browsing.
+ */
 export const getOpenMatches = cache(async (): Promise<MatchWithCourt[]> => {
   const session = await verifySession();
   if (!session) return [];
@@ -99,9 +105,79 @@ export const getOpenMatches = cache(async (): Promise<MatchWithCourt[]> => {
       "*, court:courts(id, name), organizer:users!matches_organizer_id_fkey(name)",
     )
     .eq("status", "abierto")
+    .eq("is_public", true)
     .order("datetime");
 
   return (data as MatchWithCourt[] | null) ?? [];
+});
+
+/**
+ * Fetches every match the current user organizes — any status, public or
+ * private — so they always have a way to find their own matches (e.g. a
+ * private one, which `getOpenMatches` deliberately excludes). Most recently
+ * created first.
+ */
+export const getMyMatches = cache(async (): Promise<MatchWithCourt[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("matches")
+    .select(
+      "*, court:courts(id, name), organizer:users!matches_organizer_id_fkey(name)",
+    )
+    .eq("organizer_id", session.userId)
+    .order("created_at", { ascending: false });
+
+  return (data as MatchWithCourt[] | null) ?? [];
+});
+
+/**
+ * Fetches open matches, soonest first, with enough court fields (geo +
+ * is_official) for the home screen. Private matches are excluded — see
+ * `getOpenMatches`.
+ */
+export const getOpenMatchesWithCourtGeo = cache(
+  async (): Promise<HomeMatch[]> => {
+    const session = await verifySession();
+    if (!session) return [];
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("matches")
+      .select(
+        "*, court:courts(id, name, lat, lng, is_official, photos, logo_url, amenities, promo_text, promo_code, promo_expires_at, sponsored_until, sponsor_priority), organizer:users!matches_organizer_id_fkey(name)",
+      )
+      .eq("status", "abierto")
+      .eq("is_public", true)
+      .order("datetime");
+
+    return (data as HomeMatch[] | null) ?? [];
+  },
+);
+
+/**
+ * Fetches courts for the home screen's featured banner/row: courts with an
+ * active paid sponsorship (`sponsored_until` in the future) PLUS courts
+ * marked `is_official` for free by an admin (e.g. the anchor court). Actively
+ * paying courts are ranked first (by `sponsor_priority`, then name) so
+ * sponsorship visibly buys top placement over the free official ones.
+ */
+export const getOfficialCourts = cache(async (): Promise<HomeCourt[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("courts")
+    .select(
+      "id, name, lat, lng, is_official, photos, logo_url, amenities, promo_text, promo_code, promo_expires_at, sponsored_until, sponsor_priority",
+    )
+    .or(`is_official.eq.true,sponsored_until.gt.${new Date().toISOString()}`)
+    .order("name");
+
+  return sortCourtsForPicker(data ?? []);
 });
 
 /** Fetches a single match by id, with court and organizer names, if visible to the current user. */
@@ -124,7 +200,7 @@ export const getMatch = cache(
 );
 
 export type MatchParticipant = Tables<"match_participants"> & {
-  user: { name: string | null } | null;
+  user: { name: string | null; id: string } | null;
 };
 
 /** Fetches participants of a match, most recently joined first. */
@@ -136,7 +212,7 @@ export const getMatchParticipants = cache(
     const supabase = await createClient();
     const { data } = await supabase
       .from("match_participants")
-      .select("*, user:users(name)")
+      .select("*, user:users(name, id)")
       .eq("match_id", matchId)
       .order("created_at", { ascending: false });
 
@@ -230,7 +306,9 @@ export const getAllUsers = cache(async (): Promise<AdminUser[]> => {
 
   if (!users) return [];
 
-  const inviterIds = [...new Set(users.map((u) => u.invited_by).filter((id) => id !== null))];
+  const inviterIds = [
+    ...new Set(users.map((u) => u.invited_by).filter((id) => id !== null)),
+  ];
 
   const inviterNames = new Map<string, string | null>();
   if (inviterIds.length > 0) {
@@ -281,6 +359,51 @@ export const getAllCourts = cache(async (): Promise<Court[]> => {
   return data ?? [];
 });
 
+export type CourtMetrics = {
+  impression: number;
+  click: number;
+  whatsapp: number;
+  directions: number;
+  promo_copy: number;
+  match_created: number;
+};
+
+const EMPTY_COURT_METRICS: CourtMetrics = {
+  impression: 0,
+  click: 0,
+  whatsapp: 0,
+  directions: 0,
+  promo_copy: 0,
+  match_created: 0,
+};
+
+/**
+ * Aggregates a court's `court_events` from the last 30 days (admin-only) —
+ * the "is the sponsorship worth it" report: impressions/clicks on the home
+ * banner, WhatsApp/directions taps and promo copies on its detail page, and
+ * matches created there.
+ */
+export const getCourtMetrics = cache(
+  async (courtId: string): Promise<CourtMetrics | null> => {
+    const isAdmin = await getIsAdmin();
+    if (!isAdmin) return null;
+
+    const supabase = await createClient();
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { data } = await supabase
+      .from("court_events")
+      .select("type")
+      .eq("court_id", courtId)
+      .gte("created_at", thirtyDaysAgo);
+
+    const counts = { ...EMPTY_COURT_METRICS };
+    for (const row of data ?? []) {
+      if (row.type in counts) counts[row.type as keyof CourtMetrics] += 1;
+    }
+    return counts;
+  },
+);
+
 export type AdminMetrics = {
   totalUsers: number;
   newUsersLast7Days: number;
@@ -308,6 +431,7 @@ export const getAdminMetrics = cache(async (): Promise<AdminMetrics | null> => {
     { count: abiertos },
     { count: completos },
     { count: cancelados },
+    { count: vencidos },
     { count: totalParticipants },
   ] = await Promise.all([
     supabase.from("users").select("*", { count: "exact", head: true }),
@@ -330,6 +454,10 @@ export const getAdminMetrics = cache(async (): Promise<AdminMetrics | null> => {
       .select("*", { count: "exact", head: true })
       .eq("status", "cancelado"),
     supabase
+      .from("matches")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "vencido"),
+    supabase
       .from("match_participants")
       .select("*", { count: "exact", head: true }),
   ]);
@@ -343,6 +471,7 @@ export const getAdminMetrics = cache(async (): Promise<AdminMetrics | null> => {
       abierto: abiertos ?? 0,
       completo: completos ?? 0,
       cancelado: cancelados ?? 0,
+      vencido: vencidos ?? 0,
     },
     totalParticipants: totalParticipants ?? 0,
   };

@@ -29,7 +29,7 @@ export function ShareMatchButton({ title, datetime }: ShareMatchButtonProps) {
     <button
       type="button"
       onClick={handleShare}
-      className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+      className="rounded-lg border border-surface-variant px-3 py-1.5 font-label text-xs font-bold text-on-surface"
     >
       Compartir
     </button>

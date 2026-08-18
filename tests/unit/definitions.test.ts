@@ -76,7 +76,7 @@ describe("OnboardingFormSchema", () => {
     const result = OnboardingFormSchema.safeParse({
       name: "Juan",
       zone: "La Lago",
-      sportPreferences: ["tenis"],
+      sportPreferences: ["futbol"],
       vibe: "loco",
     });
 

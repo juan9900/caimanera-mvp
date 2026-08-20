@@ -5,6 +5,7 @@ import type { Tables } from "@/lib/supabase/database.types";
 import type { HomeCourt, HomeMatch } from "@/lib/matches/home";
 import { sortCourtsForPicker } from "@/lib/courts/sort";
 import type { FriendRelation } from "@/lib/friends/definitions";
+import type { GroupRelation } from "@/lib/groups/definitions";
 
 export type Session = {
   userId: string;
@@ -756,3 +757,217 @@ export const getActivityFeed = cache(
       .slice(0, limit);
   },
 );
+
+export type Group = Tables<"groups">;
+
+export type GroupMemberRow = {
+  membershipId: string;
+  status: "miembro" | "invitado";
+  user: NetworkUser;
+};
+
+export type GroupSummary = {
+  group: Group;
+  memberCount: number;
+  isOwner: boolean;
+};
+
+export type GroupDetail = {
+  group: Group;
+  isOwner: boolean;
+  members: GroupMemberRow[];
+  invited: GroupMemberRow[];
+};
+
+export type GroupInvitation = {
+  membershipId: string;
+  groupId: string;
+  groupName: string;
+  inviter: NetworkUser | null;
+};
+
+export type GroupUserSearchResult = UserSearchResult & {
+  groupRelation: GroupRelation;
+};
+
+export type GroupPreview = {
+  id: string;
+  name: string;
+  ownerName: string | null;
+  memberCount: number;
+};
+
+/** Fetches the groups the current user belongs to (`miembro` rows only), most recently created first. */
+export const getMyGroups = cache(async (): Promise<GroupSummary[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("group_members")
+    .select("group:groups!group_members_group_id_fkey(*)")
+    .eq("user_id", session.userId)
+    .eq("status", "miembro");
+
+  if (!data) return [];
+
+  const groups = data
+    .map((row) => row.group)
+    .filter((g): g is Group => g !== null)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  if (groups.length === 0) return [];
+
+  const { data: memberRows } = await supabase
+    .from("group_members")
+    .select("group_id")
+    .in(
+      "group_id",
+      groups.map((g) => g.id)
+    )
+    .eq("status", "miembro");
+
+  const counts = new Map<string, number>();
+  for (const row of memberRows ?? []) {
+    counts.set(row.group_id, (counts.get(row.group_id) ?? 0) + 1);
+  }
+
+  return groups.map((group) => ({
+    group,
+    memberCount: counts.get(group.id) ?? 1,
+    isOwner: group.owner_id === session.userId,
+  }));
+});
+
+/** Fetches a single group's detail (members + pending invitees), or `null` if it doesn't exist or isn't visible to the current user (RLS). */
+export const getGroup = cache(async (groupId: string): Promise<GroupDetail | null> => {
+  const session = await verifySession();
+  if (!session) return null;
+
+  const supabase = await createClient();
+  const { data: group } = await supabase
+    .from("groups")
+    .select("*")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (!group) return null;
+
+  const { data: memberRows } = await supabase
+    .from("group_members")
+    .select("id, status, user:users!group_members_user_id_fkey(id, name, zone, created_at)")
+    .eq("group_id", groupId)
+    .order("created_at", { ascending: true });
+
+  const rows: GroupMemberRow[] = (memberRows ?? [])
+    .filter((row): row is typeof row & { user: NetworkUser } => row.user !== null)
+    .map((row) => ({ membershipId: row.id, status: row.status, user: row.user }));
+
+  return {
+    group,
+    isOwner: group.owner_id === session.userId,
+    members: rows.filter((r) => r.status === "miembro"),
+    invited: rows.filter((r) => r.status === "invitado"),
+  };
+});
+
+/** Fetches the accepted member ids of a group — used by `inviteGroupToMatch`; empty if the group doesn't exist or isn't visible (RLS). */
+export const getGroupMemberIds = cache(async (groupId: string): Promise<string[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("group_members")
+    .select("user_id")
+    .eq("group_id", groupId)
+    .eq("status", "miembro");
+
+  return (data ?? []).map((row) => row.user_id);
+});
+
+/** Fetches the current user's pending group invitations (`invitado` rows), most recent first. */
+export const getMyGroupInvitations = cache(async (): Promise<GroupInvitation[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("group_members")
+    .select(
+      "id, group:groups!group_members_group_id_fkey(id, name), inviter:users!group_members_inviter_id_fkey(id, name, zone, created_at)"
+    )
+    .eq("user_id", session.userId)
+    .eq("status", "invitado")
+    .order("created_at", { ascending: false });
+
+  if (!data) return [];
+
+  return data
+    .filter((row): row is typeof row & { group: Pick<Group, "id" | "name"> } => row.group !== null)
+    .map((row) => ({
+      membershipId: row.id,
+      groupId: row.group.id,
+      groupName: row.group.name,
+      inviter: row.inviter,
+    }));
+});
+
+/**
+ * Resolves a group invite link's token to a read-only preview (name, owner,
+ * member count) via the `group_preview_by_token` RPC, without joining.
+ * Joining is a separate, explicit step (`joinGroupByToken`) — opening the
+ * link itself must never have side effects (Next.js prefetch, link-preview
+ * bots, etc.).
+ */
+export const getGroupPreviewByToken = cache(
+  async (token: string): Promise<GroupPreview | null> => {
+    const session = await verifySession();
+    if (!session) return null;
+
+    const supabase = await createClient();
+    const { data } = await supabase.rpc("group_preview_by_token", { p_token: token });
+
+    const row = data?.[0];
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      ownerName: row.owner_name,
+      memberCount: row.member_count,
+    };
+  }
+);
+
+/** Searches other users for the "invitar a este grupo" panel, tagging each with their relation to that group. Not memoized — dynamic, like `searchUsers`. */
+export async function searchUsersForGroup(
+  groupId: string,
+  query: string
+): Promise<GroupUserSearchResult[]> {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const results = await searchUsers(query);
+  if (results.length === 0) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("group_members")
+    .select("user_id, status")
+    .eq("group_id", groupId)
+    .in(
+      "user_id",
+      results.map((r) => r.id)
+    );
+
+  const relationByUserId = new Map<string, GroupRelation>();
+  for (const row of data ?? []) {
+    relationByUserId.set(row.user_id, row.status);
+  }
+
+  return results.map((r) => ({
+    ...r,
+    groupRelation: relationByUserId.get(r.id) ?? "ninguna",
+  }));
+}

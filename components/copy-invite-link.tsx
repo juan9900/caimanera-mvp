@@ -2,15 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function CopyInviteLink({ referralCode }: { referralCode: string }) {
+export function CopyInviteLink({ path }: { path: string }) {
   const [copied, setCopied] = useState(false);
   const linkRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (linkRef.current) {
-      linkRef.current.textContent = `${window.location.origin}/signup?ref=${referralCode}`;
+      linkRef.current.textContent = `${window.location.origin}${path}`;
     }
-  }, [referralCode]);
+  }, [path]);
 
   async function handleCopy() {
     const link = linkRef.current?.textContent ?? "";
@@ -19,11 +19,31 @@ export function CopyInviteLink({ referralCode }: { referralCode: string }) {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function handleShare() {
+    const link = linkRef.current?.textContent ?? `${window.location.origin}${path}`;
+    if (navigator.share) {
+      navigator.share({ url: link }).catch(() => {});
+      return;
+    }
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(link)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
   return (
     <div className="flex items-center gap-2 rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
       <span ref={linkRef} className="flex-1 truncate font-label text-sm text-on-surface">
-        {`/signup?ref=${referralCode}`}
+        {path}
       </span>
+      <button
+        type="button"
+        onClick={handleShare}
+        className="shrink-0 rounded-lg border border-outline-variant px-3 py-1.5 font-label text-xs font-bold text-on-surface"
+      >
+        Compartir
+      </button>
       <button
         type="button"
         onClick={handleCopy}

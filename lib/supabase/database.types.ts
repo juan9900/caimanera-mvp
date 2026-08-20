@@ -56,6 +56,7 @@ export type Database = {
       courts: {
         Row: {
           added_by: string
+          address: string | null
           amenities: string[]
           booking_url: string | null
           closes_at: string | null
@@ -76,10 +77,12 @@ export type Database = {
           schedule: string | null
           sponsor_priority: number
           sponsored_until: string | null
+          sports: string[]
           whatsapp_url: string | null
         }
         Insert: {
           added_by: string
+          address?: string | null
           amenities?: string[]
           booking_url?: string | null
           closes_at?: string | null
@@ -100,10 +103,12 @@ export type Database = {
           schedule?: string | null
           sponsor_priority?: number
           sponsored_until?: string | null
+          sports?: string[]
           whatsapp_url?: string | null
         }
         Update: {
           added_by?: string
+          address?: string | null
           amenities?: string[]
           booking_url?: string | null
           closes_at?: string | null
@@ -124,6 +129,7 @@ export type Database = {
           schedule?: string | null
           sponsor_priority?: number
           sponsored_until?: string | null
+          sports?: string[]
           whatsapp_url?: string | null
         }
         Relationships: [
@@ -172,6 +178,90 @@ export type Database = {
           {
             foreignKeyName: "friendships_requester_id_fkey"
             columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          inviter_id: string | null
+          joined_at: string | null
+          status: Database["public"]["Enums"]["group_member_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          inviter_id?: string | null
+          joined_at?: string | null
+          status?: Database["public"]["Enums"]["group_member_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          inviter_id?: string | null
+          joined_at?: string | null
+          status?: Database["public"]["Enums"]["group_member_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          id: string
+          invite_token: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invite_token?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invite_token?: string
+          name?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -333,6 +423,9 @@ export type Database = {
           id: string
           invited_by: string | null
           is_admin: boolean
+          location_label: string | null
+          location_lat: number | null
+          location_lng: number | null
           name: string | null
           notification_scopes: string[]
           phone: string | null
@@ -347,6 +440,9 @@ export type Database = {
           id: string
           invited_by?: string | null
           is_admin?: boolean
+          location_label?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           name?: string | null
           notification_scopes?: string[]
           phone?: string | null
@@ -361,6 +457,9 @@ export type Database = {
           id?: string
           invited_by?: string | null
           is_admin?: boolean
+          location_label?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           name?: string | null
           notification_scopes?: string[]
           phone?: string | null
@@ -385,11 +484,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      group_preview_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          id: string
+          member_count: number
+          name: string
+          owner_name: string
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_direct_network: {
         Args: { candidate: string; organizer: string }
         Returns: boolean
       }
+      join_group_by_token: { Args: { p_token: string }; Returns: string }
       log_court_event: {
         Args: { p_court_id: string; p_type: string }
         Returns: undefined
@@ -403,10 +512,13 @@ export type Database = {
           subscription_id: string
         }[]
       }
+      user_has_group_row: { Args: { p_group_id: string }; Returns: boolean }
       user_is_confirmed_in_match: {
         Args: { p_match_id: string }
         Returns: boolean
       }
+      user_is_group_member: { Args: { p_group_id: string }; Returns: boolean }
+      user_is_group_owner: { Args: { p_group_id: string }; Returns: boolean }
       user_is_match_organizer: {
         Args: { p_match_id: string }
         Returns: boolean
@@ -418,6 +530,7 @@ export type Database = {
     }
     Enums: {
       friendship_status: "pendiente" | "aceptada" | "rechazada"
+      group_member_status: "invitado" | "miembro"
       joined_via_type: "red_directa" | "externo"
       match_status: "abierto" | "completo" | "cancelado" | "vencido"
       participant_status: "confirmado" | "pendiente" | "rechazado" | "invitado"
@@ -550,6 +663,7 @@ export const Constants = {
   public: {
     Enums: {
       friendship_status: ["pendiente", "aceptada", "rechazada"],
+      group_member_status: ["invitado", "miembro"],
       joined_via_type: ["red_directa", "externo"],
       match_status: ["abierto", "completo", "cancelado", "vencido"],
       participant_status: ["confirmado", "pendiente", "rechazado", "invitado"],

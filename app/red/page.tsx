@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import {
   verifySession,
   getCurrentUserProfile,
@@ -7,6 +8,7 @@ import {
   getMyFriends,
   getIncomingFriendRequests,
   getOutgoingFriendRequests,
+  getMyGroups,
 } from "@/lib/auth/dal";
 import { CopyInviteLink } from "@/components/copy-invite-link";
 import { FriendSearch } from "@/components/friends/friend-search";
@@ -25,13 +27,14 @@ export default async function RedPage() {
   const profile = await getCurrentUserProfile();
   if (!profile?.name) redirect("/onboarding");
 
-  const [invitees, inviter, friends, incomingRequests, outgoingRequests] =
+  const [invitees, inviter, friends, incomingRequests, outgoingRequests, groups] =
     await Promise.all([
       getMyInvitees(),
       getMyInviter(),
       getMyFriends(),
       getIncomingFriendRequests(),
       getOutgoingFriendRequests(),
+      getMyGroups(),
     ]);
 
   return (
@@ -158,6 +161,38 @@ export default async function RedPage() {
       </section>
 
       <section className="mb-8">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold text-on-surface">
+            Mis grupos ({groups.length})
+          </h2>
+          <Link href="/grupos" className="font-label text-xs font-bold text-primary-lime">
+            Ver todos
+          </Link>
+        </div>
+        {groups.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-surface-variant px-4 py-6 text-center font-body text-sm text-on-surface-variant">
+            Junta a tus amigos en grupos para invitarlos de un toque a tus partidos.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {groups.map(({ group, memberCount }) => (
+              <li key={group.id}>
+                <Link
+                  href={`/grupos/${group.id}`}
+                  className="flex items-center justify-between rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3"
+                >
+                  <p className="font-body text-on-surface">{group.name}</p>
+                  <p className="font-body text-sm text-on-surface-variant">
+                    {memberCount} {memberCount === 1 ? "miembro" : "miembros"}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mb-8">
         <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
           Quién te invitó
         </h2>
@@ -184,7 +219,7 @@ export default async function RedPage() {
         <p className="mb-2 font-body text-sm text-on-surface-variant">
           Es fijo y podés compartirlo con quien quieras, las veces que quieras.
         </p>
-        <CopyInviteLink referralCode={profile.referral_code} />
+        <CopyInviteLink path={`/signup?ref=${profile.referral_code}`} />
       </section>
 
       <section>

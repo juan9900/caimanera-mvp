@@ -8,6 +8,7 @@ import {
   getMatchParticipants,
   getMyParticipation,
   getMyFriends,
+  getMyGroups,
 } from "@/lib/auth/dal";
 import {
   joinMatch,
@@ -23,6 +24,7 @@ import { ShareMatchButton } from "@/components/share-match-button";
 import { MatchActionForm } from "@/components/match-action-form";
 import { MatchVisibilitySwitch } from "@/components/matches/match-visibility-switch";
 import { InviteFriends } from "@/components/matches/invite-friends";
+import { InviteGroup } from "@/components/matches/invite-group";
 
 const SPORT_LABELS: Record<string, string> = {
   futbol: "Fútbol",
@@ -70,6 +72,7 @@ export default async function MatchDetailPage(
   const participants = await getMatchParticipants(id);
   const myParticipation = isOrganizer ? null : await getMyParticipation(id);
   const friends = isOrganizer && match.status === "abierto" ? await getMyFriends() : [];
+  const groups = isOrganizer && match.status === "abierto" ? await getMyGroups() : [];
 
   const confirmed = participants.filter((p) => p.status === "confirmado");
   const pending = participants.filter((p) => p.status === "pendiente");
@@ -273,6 +276,7 @@ export default async function MatchDetailPage(
           <h2 className="mb-3 font-display text-lg font-bold text-on-surface">
             Invitar jugadores
           </h2>
+          <InviteGroup matchId={match.id} groups={groups} />
           <InviteFriends
             matchId={match.id}
             friends={friends}

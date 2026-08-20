@@ -4,11 +4,12 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { login } from "@/app/actions/auth";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string } = {}) {
   const [state, action, pending] = useActionState(login, undefined);
 
   return (
     <form action={action} className="w-full max-w-sm space-y-4">
+      {next && <input type="hidden" name="next" value={next} />}
       <div>
         <label htmlFor="email" className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
           Email

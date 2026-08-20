@@ -40,6 +40,7 @@ export function HeaderNav({
     { href: "/partidos", label: "Partidos", count: 0 },
     { href: "/invitaciones", label: "Invitaciones", count: invitationCount },
     { href: "/red", label: "Mi red", count: friendRequestCount },
+    { href: "/grupos", label: "Grupos", count: 0 },
     { href: "/perfil", label: "Perfil", count: 0 },
     ...(isAdmin ? [{ href: "/admin", label: "Admin", count: 0 }] : []),
   ];
@@ -49,6 +50,7 @@ export function HeaderNav({
     { href: "/partidos", label: "Partidos", count: 0 },
     { href: "/canchas", label: "Canchas", count: 0 },
     { href: "/red", label: "Mi red", count: friendRequestCount },
+    { href: "/grupos", label: "Grupos", count: 0 },
     { href: "/invitaciones", label: "Invitaciones", count: invitationCount },
     { href: "/perfil", label: "Perfil", count: 0 },
   ];
@@ -68,6 +70,7 @@ export function HeaderNav({
       .channel("header-nav-badges")
       .on("postgres_changes", { event: "*", schema: "public", table: "match_participants" }, scheduleRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "group_members" }, scheduleRefresh)
       .subscribe();
 
     return () => {

@@ -2,8 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getCurrentUserProfile, requireSession } from "@/lib/auth/dal";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getCurrentUserProfile, getGroupMemberIds, requireSession } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/database.types";
 import {
   CreateMatchFormSchema,
   type CreateMatchFormState,
@@ -153,15 +155,63 @@ export async function joinMatch(formData: FormData): Promise<MatchActionResult> 
 }
 
 /**
+ * Shared by `inviteToMatch` and `inviteGroupToMatch` once the caller has
+ * already been confirmed as the organizer: skips users who already have a
+ * participant row (any status), so re-running an invite after some already
+ * accepted is harmless, then inserts `invitado` rows and notifies.
+ */
+async function inviteUserIdsToMatch(
+  supabase: SupabaseClient<Database>,
+  matchId: string,
+  organizerId: string,
+  userIds: string[]
+): Promise<MatchActionResult> {
+  const { data: existing } = await supabase
+    .from("match_participants")
+    .select("user_id")
+    .eq("match_id", matchId)
+    .in("user_id", userIds);
+
+  const existingIds = new Set((existing ?? []).map((p) => p.user_id));
+  const toInvite = userIds.filter((id) => !existingIds.has(id));
+
+  if (toInvite.length === 0) {
+    revalidatePath(`/partidos/${matchId}`);
+    return;
+  }
+
+  const rows = await Promise.all(
+    toInvite.map(async (userId) => {
+      const { data: isDirectNetwork } = await supabase.rpc("is_direct_network", {
+        organizer: organizerId,
+        candidate: userId,
+      });
+      return {
+        match_id: matchId,
+        user_id: userId,
+        status: "invitado" as const,
+        joined_via: isDirectNetwork ? ("red_directa" as const) : ("externo" as const),
+      };
+    }),
+  );
+
+  const { error } = await supabase.from("match_participants").insert(rows);
+
+  if (error) return { message: "No se pudo invitar a los jugadores. Intenta de nuevo." };
+
+  const profile = await getCurrentUserProfile();
+  await notifyInvited(supabase, matchId, toInvite, profile?.name ?? null);
+
+  revalidatePath(`/partidos/${matchId}`);
+}
+
+/**
  * Organizer invites specific users to a match — the only way in for a
  * PRIVATE match (see `setMatchVisibility`); public matches also offer this
  * alongside the "Unirse"/`joinMatch` flow, so the organizer can proactively
  * pull in friends instead of waiting to be discovered. Invited rows start
  * `invitado`, which the `recalc_match_slots` trigger ignores, so inviting
  * never occupies a slot — only `respondToInvitation` accepting one does.
- * Silently skips users who already have a participant row (any status)
- * instead of erroring, so re-running "invitar a todos mis amigos" after some
- * already accepted is harmless.
  */
 export async function inviteToMatch(formData: FormData): Promise<MatchActionResult> {
   const session = await requireSession();
@@ -193,43 +243,42 @@ export async function inviteToMatch(formData: FormData): Promise<MatchActionResu
     return { message: "Solo el organizador puede invitar." };
   }
 
-  const { data: existing } = await supabase
-    .from("match_participants")
-    .select("user_id")
-    .eq("match_id", matchId)
-    .in("user_id", userIds);
+  return inviteUserIdsToMatch(supabase, matchId, match.organizer_id, userIds);
+}
 
-  const existingIds = new Set((existing ?? []).map((p) => p.user_id));
-  const toInvite = userIds.filter((id) => !existingIds.has(id));
+/**
+ * Organizer invites every accepted member of one of their own groups in a
+ * single click. Membership is resolved via `getGroupMemberIds`, whose RLS
+ * already requires the caller to belong to the group, so no extra
+ * membership check is needed here.
+ */
+export async function inviteGroupToMatch(formData: FormData): Promise<MatchActionResult> {
+  const session = await requireSession();
+  const matchId = formData.get("matchId");
+  const groupId = formData.get("groupId");
+  if (typeof matchId !== "string" || typeof groupId !== "string") return;
 
-  if (toInvite.length === 0) {
-    revalidatePath(`/partidos/${matchId}`);
-    return;
+  const supabase = await createClient();
+
+  const { data: match } = await supabase
+    .from("matches")
+    .select("organizer_id")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (!match) return { message: "El partido ya no existe." };
+  if (match.organizer_id !== session.userId) {
+    return { message: "Solo el organizador puede invitar." };
   }
 
-  const rows = await Promise.all(
-    toInvite.map(async (userId) => {
-      const { data: isDirectNetwork } = await supabase.rpc("is_direct_network", {
-        organizer: match.organizer_id,
-        candidate: userId,
-      });
-      return {
-        match_id: matchId,
-        user_id: userId,
-        status: "invitado" as const,
-        joined_via: isDirectNetwork ? ("red_directa" as const) : ("externo" as const),
-      };
-    }),
-  );
+  const memberIds = await getGroupMemberIds(groupId);
+  const userIds = memberIds.filter((id) => id !== session.userId);
 
-  const { error } = await supabase.from("match_participants").insert(rows);
+  if (userIds.length === 0) {
+    return { message: "No pudimos leer los miembros de ese grupo." };
+  }
 
-  if (error) return { message: "No se pudo invitar a los jugadores. Intenta de nuevo." };
-
-  const profile = await getCurrentUserProfile();
-  await notifyInvited(supabase, matchId, toInvite, profile?.name ?? null);
-
-  revalidatePath(`/partidos/${matchId}`);
+  return inviteUserIdsToMatch(supabase, matchId, match.organizer_id, userIds);
 }
 
 /**

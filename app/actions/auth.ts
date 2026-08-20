@@ -67,7 +67,11 @@ export async function login(
     return { message: translateAuthError(error.message) };
   }
 
-  redirect("/");
+  const next = formData.get("next");
+  const safeNext =
+    typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+
+  redirect(safeNext);
 }
 
 export async function logout() {

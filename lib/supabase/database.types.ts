@@ -58,6 +58,7 @@ export type Database = {
           added_by: string
           amenities: string[]
           booking_url: string | null
+          closes_at: string | null
           contact_phone: string | null
           created_at: string
           id: string
@@ -66,6 +67,8 @@ export type Database = {
           lng: number
           logo_url: string | null
           name: string
+          open_days: number[]
+          opens_at: string | null
           photos: string[] | null
           promo_code: string | null
           promo_expires_at: string | null
@@ -79,6 +82,7 @@ export type Database = {
           added_by: string
           amenities?: string[]
           booking_url?: string | null
+          closes_at?: string | null
           contact_phone?: string | null
           created_at?: string
           id?: string
@@ -87,6 +91,8 @@ export type Database = {
           lng: number
           logo_url?: string | null
           name: string
+          open_days?: number[]
+          opens_at?: string | null
           photos?: string[] | null
           promo_code?: string | null
           promo_expires_at?: string | null
@@ -100,6 +106,7 @@ export type Database = {
           added_by?: string
           amenities?: string[]
           booking_url?: string | null
+          closes_at?: string | null
           contact_phone?: string | null
           created_at?: string
           id?: string
@@ -108,6 +115,8 @@ export type Database = {
           lng?: number
           logo_url?: string | null
           name?: string
+          open_days?: number[]
+          opens_at?: string | null
           photos?: string[] | null
           promo_code?: string | null
           promo_expires_at?: string | null
@@ -121,6 +130,48 @@ export type Database = {
           {
             foreignKeyName: "courts_added_by_fkey"
             columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          responded_at: string | null
+          status: Database["public"]["Enums"]["friendship_status"]
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["friendship_status"]
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["friendship_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requester_id_fkey"
+            columns: ["requester_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -366,9 +417,10 @@ export type Database = {
       }
     }
     Enums: {
+      friendship_status: "pendiente" | "aceptada" | "rechazada"
       joined_via_type: "red_directa" | "externo"
       match_status: "abierto" | "completo" | "cancelado" | "vencido"
-      participant_status: "confirmado" | "pendiente" | "rechazado"
+      participant_status: "confirmado" | "pendiente" | "rechazado" | "invitado"
       vibe_type: "relajado" | "competitivo"
     }
     CompositeTypes: {
@@ -497,9 +549,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      friendship_status: ["pendiente", "aceptada", "rechazada"],
       joined_via_type: ["red_directa", "externo"],
       match_status: ["abierto", "completo", "cancelado", "vencido"],
-      participant_status: ["confirmado", "pendiente", "rechazado"],
+      participant_status: ["confirmado", "pendiente", "rechazado", "invitado"],
       vibe_type: ["relajado", "competitivo"],
     },
   },

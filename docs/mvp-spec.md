@@ -17,6 +17,7 @@ Grupos de amigos que juegan futbol/tenis regularmente en Maracaibo coordinan par
 ## Alcance del MVP (qué SÍ construir)
 
 ### Roles
+
 - **Jugador**: puede crear partidos, unirse a partidos, invitar gente, agregar canchas.
 - No hay rol de "admin de cancha" todavía — eso es fase 2 (canchas oficiales/monetización).
 
@@ -55,6 +56,7 @@ Grupos de amigos que juegan futbol/tenis regularmente en Maracaibo coordinan par
    - El link, al abrirse sin la app instalada, lleva a una landing simple de descarga que preserva el código de invitación.
 
 ### Fuera de alcance del MVP (explícitamente NO construir todavía)
+
 - Pagos o repartición de costos entre jugadores.
 - Chat interno (se sigue usando WhatsApp).
 - Sistema de rating/reputación numérica de jugadores (la "buena onda post-partido" es fase 2).
@@ -106,6 +108,7 @@ invitations
 ## Criterio de éxito del MVP
 
 No mires número de descargas. Mide:
+
 1. **% de partidos que se llenan completamente** (vs. quedar incompletos como pasa hoy sin la app).
 2. **Cuántos partidos consecutivos** organiza el mismo usuario sin necesidad de recordárselo — indica retención orgánica real.
 3. **Cuántas canchas "agregadas por jugador" se repiten en múltiples partidos de distintos organizadores** — esa es la señal para saber a qué canchas contactar primero para el modelo de monetización B2B (fase 2, fuera de este MVP).
@@ -123,10 +126,11 @@ No fijar precios todavía. Validar el nivel 2 (reclamado gratis) primero; para e
 ## Estructura del home (referencia — el detalle de implementación vive en el archivo separado `home-ui-spec.md`)
 
 El home sigue una lógica de prioridad: primero resolver el problema del usuario (utilidad), después mostrar inventario de negocio (monetización). Order fijo:
+
 1. Buscador + ubicación.
 2. Carrusel de banners de canchas destacadas (nivel 3 de monetización) — funciona aunque al inicio solo tenga la cancha ancla.
 3. Categorías rápidas (deporte, cuándo, cercanía).
-4. Sección "Te necesitan ya" — partidos abiertos ordenados por urgencia (menos cupos primero). Esta sección va antes que las canchas destacadas a propósito: la utilidad viene primero para ganar confianza, la monetización después.
+4. Sección "Sesiones públicas" — partidos abiertos ordenados por urgencia (menos cupos primero). Esta sección va antes que las canchas destacadas a propósito: la utilidad viene primero para ganar confianza, la monetización después.
 5. Sección "Canchas destacadas cerca" — solo canchas con `is_official = true`.
 6. Botón fijo de "Crear partido", siempre visible.
 

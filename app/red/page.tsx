@@ -4,8 +4,19 @@ import {
   getCurrentUserProfile,
   getMyInvitees,
   getMyInviter,
+  getMyFriends,
+  getIncomingFriendRequests,
+  getOutgoingFriendRequests,
 } from "@/lib/auth/dal";
 import { CopyInviteLink } from "@/components/copy-invite-link";
+import { FriendSearch } from "@/components/friends/friend-search";
+import { MatchActionForm } from "@/components/match-action-form";
+import {
+  acceptFriendRequest,
+  rejectFriendRequest,
+  cancelFriendRequest,
+  removeFriend,
+} from "@/app/actions/friends";
 
 export default async function RedPage() {
   const session = await verifySession();
@@ -14,18 +25,137 @@ export default async function RedPage() {
   const profile = await getCurrentUserProfile();
   if (!profile?.name) redirect("/onboarding");
 
-  const [invitees, inviter] = await Promise.all([
-    getMyInvitees(),
-    getMyInviter(),
-  ]);
+  const [invitees, inviter, friends, incomingRequests, outgoingRequests] =
+    await Promise.all([
+      getMyInvitees(),
+      getMyInviter(),
+      getMyFriends(),
+      getIncomingFriendRequests(),
+      getOutgoingFriendRequests(),
+    ]);
 
   return (
     <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
       <h1 className="mb-2 font-display text-2xl font-bold">Mi red</h1>
       <p className="mb-6 font-body text-on-surface-variant">
-        Tu red directa influye en qué partidos ves confirmados de una y
-        cuáles quedan pendientes de aprobación.
+        Cuando pides unirte a un partido, el organizador ve si eres de su red
+        directa o externo — pero siempre debe aprobar tu solicitud.
       </p>
+
+      <section className="mb-8">
+        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
+          Buscar y agregar amigos
+        </h2>
+        <FriendSearch />
+      </section>
+
+      {incomingRequests.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
+            Solicitudes recibidas ({incomingRequests.length})
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {incomingRequests.map((request) => (
+              <li
+                key={request.friendshipId}
+                className="flex items-center justify-between rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3"
+              >
+                <div>
+                  <p className="font-body text-on-surface">
+                    {request.user.name ?? "Jugador"}
+                  </p>
+                  {request.user.zone && (
+                    <p className="font-body text-sm text-on-surface-variant">
+                      {request.user.zone}
+                    </p>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <MatchActionForm
+                    action={acceptFriendRequest}
+                    hiddenFields={{ friendshipId: request.friendshipId }}
+                    label="Aceptar"
+                    className="rounded-lg bg-primary-lime px-3 py-1.5 font-label text-xs font-bold text-on-primary active:scale-95"
+                  />
+                  <MatchActionForm
+                    action={rejectFriendRequest}
+                    hiddenFields={{ friendshipId: request.friendshipId }}
+                    label="Rechazar"
+                    className="rounded-lg border border-outline-variant px-3 py-1.5 font-label text-xs font-bold text-on-surface active:scale-95"
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {outgoingRequests.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
+            Solicitudes enviadas ({outgoingRequests.length})
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {outgoingRequests.map((request) => (
+              <li
+                key={request.friendshipId}
+                className="flex items-center justify-between rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3"
+              >
+                <div>
+                  <p className="font-body text-on-surface">
+                    {request.user.name ?? "Jugador"}
+                  </p>
+                  {request.user.zone && (
+                    <p className="font-body text-sm text-on-surface-variant">
+                      {request.user.zone}
+                    </p>
+                  )}
+                </div>
+                <MatchActionForm
+                  action={cancelFriendRequest}
+                  hiddenFields={{ friendshipId: request.friendshipId }}
+                  label="Cancelar"
+                  className="shrink-0 rounded-lg border border-outline-variant px-3 py-1.5 font-label text-xs font-bold text-on-surface active:scale-95"
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="mb-8">
+        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
+          Mis amigos ({friends.length})
+        </h2>
+        <ul className="flex flex-col gap-2">
+          {friends.length === 0 && (
+            <li className="rounded-xl border border-dashed border-surface-variant px-4 py-6 text-center font-body text-sm text-on-surface-variant">
+              Todavía no tienes amigos agregados.
+            </li>
+          )}
+          {friends.map((friend) => (
+            <li
+              key={friend.friendshipId}
+              className="flex items-center justify-between rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3"
+            >
+              <div>
+                <p className="font-body text-on-surface">{friend.user.name ?? "Jugador"}</p>
+                {friend.user.zone && (
+                  <p className="font-body text-sm text-on-surface-variant">
+                    {friend.user.zone}
+                  </p>
+                )}
+              </div>
+              <MatchActionForm
+                action={removeFriend}
+                hiddenFields={{ friendshipId: friend.friendshipId }}
+                label="Eliminar"
+                className="shrink-0 rounded-lg border border-outline-variant px-3 py-1.5 font-label text-xs font-bold text-on-surface active:scale-95"
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="mb-8">
         <h2 className="mb-2 font-display text-lg font-bold text-on-surface">

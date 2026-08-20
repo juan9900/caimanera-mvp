@@ -11,19 +11,25 @@ import {
   type HomeCourt,
   type HomeMatch,
 } from "@/lib/matches/home";
+import type { MatchInvitation } from "@/lib/auth/dal";
 import { QuickFilters, type QuickFilterState } from "@/components/home/quick-filters";
 import { FeaturedCourtsCarousel } from "@/components/home/featured-courts-carousel";
+import { InvitationsSection } from "@/components/home/invitations-section";
+import { FriendsMatches } from "@/components/home/friends-matches";
 import { NeededMatches } from "@/components/home/needed-matches";
-import { CourtSponsorBanner } from "@/components/home/court-sponsor-banner";
 
 const REALTIME_REFRESH_DEBOUNCE_MS = 800;
 
 /** Orchestrates the home screen: search, quick filters, geolocation, and live match updates. */
 export function HomeClient({
   matches,
+  friendsMatches,
+  invitations,
   officialCourts,
 }: {
   matches: HomeMatch[];
+  friendsMatches: HomeMatch[];
+  invitations: MatchInvitation[];
   officialCourts: HomeCourt[];
 }) {
   const router = useRouter();
@@ -43,6 +49,10 @@ export function HomeClient({
     const channel = supabase
       .channel("home-open-matches")
       .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => router.refresh(), REALTIME_REFRESH_DEBOUNCE_MS);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "match_participants" }, () => {
         clearTimeout(timeout);
         timeout = setTimeout(() => router.refresh(), REALTIME_REFRESH_DEBOUNCE_MS);
       })
@@ -82,13 +92,15 @@ export function HomeClient({
     const allCourts = [
       ...officialCourts,
       ...matches.map((m) => m.court).filter((c): c is HomeCourt => c !== null),
+      ...friendsMatches.map((m) => m.court).filter((c): c is HomeCourt => c !== null),
+      ...invitations.map((i) => i.match.court).filter((c): c is HomeCourt => c !== null),
     ];
     for (const court of allCourts) {
       if (map.has(court.id)) continue;
       map.set(court.id, formatDistance(haversineKm(position, { lat: court.lat, lng: court.lng })));
     }
     return map;
-  }, [position, officialCourts, matches]);
+  }, [position, officialCourts, matches, friendsMatches, invitations]);
 
   const featuredCourts = useMemo(
     () => selectFeaturedCourts(officialCourts, matches),
@@ -132,13 +144,15 @@ export function HomeClient({
         )}
       </div>
 
+      <InvitationsSection invitations={invitations} distanceByCourtId={distanceByCourtId} />
+
+      <FriendsMatches matches={friendsMatches} distanceByCourtId={distanceByCourtId} />
+
       <NeededMatches
         matches={visibleMatches}
         hasAnyPublicMatches={matches.length > 0}
         distanceByCourtId={distanceByCourtId}
       />
-
-      <CourtSponsorBanner />
     </div>
   );
 }

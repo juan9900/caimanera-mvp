@@ -53,9 +53,7 @@ function SponsoredCourtCard({
       <div
         className="h-48 w-full bg-surface-variant bg-cover bg-center"
         style={image ? { backgroundImage: `url(${image})` } : undefined}
-      >
-        <div className="h-full w-full bg-gradient-to-t from-surface-container to-transparent" />
-      </div>
+      />
       <div className="p-4">
         <p className="truncate font-display text-lg font-bold text-on-surface">{court.name}</p>
         <p className="mt-1 flex items-center gap-1 truncate font-label text-xs text-on-surface-variant">
@@ -89,6 +87,9 @@ function SponsorInquiryCard() {
         <p className="mt-1 font-body text-sm text-on-surface-variant">
           Anúnciala aquí y llega a cientos de jugadores cada semana.
         </p>
+        <span className="mt-2 inline-block font-label text-xs font-bold text-on-secondary-container underline decoration-primary-lime underline-offset-4">
+          Conoce más
+        </span>
       </div>
     </a>
   );

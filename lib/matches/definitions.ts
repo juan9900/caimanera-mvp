@@ -31,6 +31,7 @@ export const CreateMatchFormSchema = z
     vibe: z.enum(["relajado", "competitivo"], {
       error: "Selecciona una vibra.",
     }),
+    isPublic: z.coerce.boolean().optional().default(true),
     totalSlots: z.coerce
       .number({ error: "Ingresa la cantidad de cupos." })
       .int()

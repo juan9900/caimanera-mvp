@@ -10,7 +10,13 @@ import {
 type Status = "unsupported" | "ios-install" | "checking" | "denied" | "enabled" | "disabled";
 
 /** Lets the current user opt in/out of Web Push notifications for this device. */
-export function EnableNotifications({ onEnabled }: { onEnabled?: () => void } = {}) {
+export function EnableNotifications({
+  onEnabled,
+  onStatusChange,
+}: {
+  onEnabled?: () => void;
+  onStatusChange?: (enabled: boolean) => void;
+} = {}) {
   const [status, setStatus] = useState<Status>("checking");
   const [pending, setPending] = useState(false);
 
@@ -25,6 +31,11 @@ export function EnableNotifications({ onEnabled }: { onEnabled?: () => void } = 
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    onStatusChange?.(status === "enabled");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   async function enable() {
     setPending(true);
@@ -68,14 +79,25 @@ export function EnableNotifications({ onEnabled }: { onEnabled?: () => void } = 
     );
   }
 
+  const enabled = status === "enabled";
+
   return (
     <button
       type="button"
-      onClick={status === "enabled" ? disable : enable}
+      role="switch"
+      aria-checked={enabled}
+      aria-label={enabled ? "Desactivar notificaciones" : "Activar notificaciones"}
+      onClick={enabled ? disable : enable}
       disabled={pending}
-      className="font-label text-xs font-bold text-primary-lime hover:underline disabled:opacity-50"
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+        enabled ? "bg-primary-lime" : "bg-surface-variant"
+      }`}
     >
-      {status === "enabled" ? "Desactivar notificaciones" : "Activar notificaciones"}
+      <span
+        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-on-surface shadow-sm transition-transform ${
+          enabled ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
     </button>
   );
 }

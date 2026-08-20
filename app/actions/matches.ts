@@ -2,14 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import webpush from "web-push";
 import { requireSession } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import {
   CreateMatchFormSchema,
   type CreateMatchFormState,
 } from "@/lib/matches/definitions";
-import { AUDIENCE_SCOPES, type AudienceScope } from "@/lib/push/definitions";
 
 export async function createMatch(
   _state: CreateMatchFormState,
@@ -22,6 +20,7 @@ export async function createMatch(
     sport: formData.get("sport"),
     datetime: formData.get("datetime"),
     vibe: formData.get("vibe"),
+    isPublic: formData.get("isPublic") === "true",
     totalSlots: formData.get("totalSlots"),
     paymentBank: formData.get("paymentBank"),
     paymentPhone: formData.get("paymentPhone"),
@@ -38,6 +37,7 @@ export async function createMatch(
     sport,
     datetime,
     vibe,
+    isPublic,
     totalSlots,
     paymentBank,
     paymentPhone,
@@ -53,6 +53,7 @@ export async function createMatch(
       sport,
       datetime: datetime.toISOString(),
       vibe,
+      is_public: isPublic,
       total_slots: totalSlots,
       organizer_id: session.userId,
       payment_bank: paymentBank ?? null,
@@ -84,7 +85,14 @@ export async function createMatch(
 
 export type MatchActionResult = { message: string } | void;
 
-/** Joins the current user into a match, as direct network or external, per `is_direct_network`. */
+/**
+ * Requests to join a match. Every join request starts `pendiente` — the
+ * organizer must approve it regardless of visibility (public/private) or
+ * network. `joined_via` (`red_directa`/`externo`, per `is_direct_network`)
+ * is kept purely as an informational badge for the organizer, it no longer
+ * grants auto-confirmation (enforced by the `match_participants` RLS insert
+ * policy too, not just here).
+ */
 export async function joinMatch(formData: FormData): Promise<MatchActionResult> {
   const session = await requireSession();
   const matchId = formData.get("matchId");
@@ -105,14 +113,150 @@ export async function joinMatch(formData: FormData): Promise<MatchActionResult> 
     candidate: session.userId,
   });
 
-  const { error } = await supabase.from("match_participants").insert(
-    isDirectNetwork
-      ? { match_id: matchId, user_id: session.userId, status: "confirmado", joined_via: "red_directa" }
-      : { match_id: matchId, user_id: session.userId, status: "pendiente", joined_via: "externo" }
-  );
+  const { error } = await supabase.from("match_participants").insert({
+    match_id: matchId,
+    user_id: session.userId,
+    status: "pendiente",
+    joined_via: isDirectNetwork ? "red_directa" : "externo",
+  });
 
   if (error) return { message: "No se pudo unir al partido. Intenta de nuevo." };
 
+  revalidatePath(`/partidos/${matchId}`);
+}
+
+/**
+ * Organizer invites specific users to a match — the only way in for a
+ * PRIVATE match (see `setMatchVisibility`); public matches also offer this
+ * alongside the "Unirse"/`joinMatch` flow, so the organizer can proactively
+ * pull in friends instead of waiting to be discovered. Invited rows start
+ * `invitado`, which the `recalc_match_slots` trigger ignores, so inviting
+ * never occupies a slot — only `respondToInvitation` accepting one does.
+ * Silently skips users who already have a participant row (any status)
+ * instead of erroring, so re-running "invitar a todos mis amigos" after some
+ * already accepted is harmless.
+ */
+export async function inviteToMatch(formData: FormData): Promise<MatchActionResult> {
+  const session = await requireSession();
+  const matchId = formData.get("matchId");
+  const userIdsRaw = formData.get("userIds");
+  if (typeof matchId !== "string" || typeof userIdsRaw !== "string") return;
+
+  const userIds = Array.from(
+    new Set(
+      userIdsRaw
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    ),
+  ).filter((id) => id !== session.userId);
+
+  if (userIds.length === 0) return { message: "Selecciona al menos un jugador." };
+
+  const supabase = await createClient();
+
+  const { data: match } = await supabase
+    .from("matches")
+    .select("organizer_id")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (!match) return { message: "El partido ya no existe." };
+  if (match.organizer_id !== session.userId) {
+    return { message: "Solo el organizador puede invitar." };
+  }
+
+  const { data: existing } = await supabase
+    .from("match_participants")
+    .select("user_id")
+    .eq("match_id", matchId)
+    .in("user_id", userIds);
+
+  const existingIds = new Set((existing ?? []).map((p) => p.user_id));
+  const toInvite = userIds.filter((id) => !existingIds.has(id));
+
+  if (toInvite.length === 0) {
+    revalidatePath(`/partidos/${matchId}`);
+    return;
+  }
+
+  const rows = await Promise.all(
+    toInvite.map(async (userId) => {
+      const { data: isDirectNetwork } = await supabase.rpc("is_direct_network", {
+        organizer: match.organizer_id,
+        candidate: userId,
+      });
+      return {
+        match_id: matchId,
+        user_id: userId,
+        status: "invitado" as const,
+        joined_via: isDirectNetwork ? ("red_directa" as const) : ("externo" as const),
+      };
+    }),
+  );
+
+  const { error } = await supabase.from("match_participants").insert(rows);
+
+  if (error) return { message: "No se pudo invitar a los jugadores. Intenta de nuevo." };
+
+  revalidatePath(`/partidos/${matchId}`);
+}
+
+/**
+ * Invitee accepts or rejects their own invitation. Accepting confirms the
+ * slot directly (no organizer approval, unlike `respondToRequest`) — the
+ * organizer already decided by inviting. Rejecting deletes the row so the
+ * organizer can invite again later. The slot-count guard here mirrors what
+ * the RLS UPDATE policy can't express (it only checks ownership/status).
+ */
+export async function respondToInvitation(formData: FormData): Promise<MatchActionResult> {
+  const session = await requireSession();
+  const participantId = formData.get("participantId");
+  const matchId = formData.get("matchId");
+  const accept = formData.get("accept") === "true";
+  if (typeof participantId !== "string" || typeof matchId !== "string") return;
+
+  const supabase = await createClient();
+
+  if (!accept) {
+    const { error } = await supabase
+      .from("match_participants")
+      .delete()
+      .eq("id", participantId)
+      .eq("user_id", session.userId)
+      .eq("status", "invitado");
+
+    if (error) return { message: "No se pudo rechazar la invitación. Intenta de nuevo." };
+
+    revalidatePath("/");
+    revalidatePath("/invitaciones");
+    revalidatePath(`/partidos/${matchId}`);
+    return;
+  }
+
+  const { data: match } = await supabase
+    .from("matches")
+    .select("slots_filled, total_slots, status")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (!match) return { message: "El partido ya no existe." };
+  if (match.status !== "abierto") return { message: "Este partido ya no está abierto." };
+  if (match.slots_filled >= match.total_slots) {
+    return { message: "El partido ya está lleno." };
+  }
+
+  const { error } = await supabase
+    .from("match_participants")
+    .update({ status: "confirmado" })
+    .eq("id", participantId)
+    .eq("user_id", session.userId)
+    .eq("status", "invitado");
+
+  if (error) return { message: "No se pudo aceptar la invitación. Intenta de nuevo." };
+
+  revalidatePath("/");
+  revalidatePath("/invitaciones");
   revalidatePath(`/partidos/${matchId}`);
 }
 
@@ -215,10 +359,10 @@ export async function reopenMatch(formData: FormData): Promise<MatchActionResult
 
 /**
  * Organizer toggles a match's visibility. Private matches are dropped from
- * the home/`/partidos` listings (see `getOpenMatches*`) but the detail page
- * stays reachable by direct link — join requests still go through the usual
- * direct-network/pending flow, so "private" means "invite-only", not a
- * separate access-control layer.
+ * the home/`/partidos` listings (see `getOpenMatches*`) and the detail page
+ * no longer offers "Unirse" to non-invited users — the organizer must
+ * `inviteToMatch` explicitly. Public matches keep both: anyone can request
+ * to join (`joinMatch`, still needs approval) AND the organizer can invite.
  */
 export async function setMatchVisibility(formData: FormData): Promise<MatchActionResult> {
   const session = await requireSession();
@@ -240,101 +384,3 @@ export async function setMatchVisibility(formData: FormData): Promise<MatchActio
   revalidatePath(`/partidos/${matchId}`);
 }
 
-export type NotifyResult = { message: string; ok: boolean };
-
-const AUDIENCE_LABELS: Record<AudienceScope, string> = {
-  red: "tu red",
-  amigos: "amigos de amigos",
-  canchas: "canchas donde juegas",
-};
-
-/** Organizer pushes a "necesito más gente" alert to a chosen audience. */
-export async function notifyNeedPlayers(formData: FormData): Promise<NotifyResult> {
-  const session = await requireSession();
-  const matchId = formData.get("matchId");
-  const scope = formData.get("scope");
-
-  if (typeof matchId !== "string" || typeof scope !== "string") {
-    return { message: "Solicitud inválida.", ok: false };
-  }
-  if (!AUDIENCE_SCOPES.includes(scope as AudienceScope)) {
-    return { message: "Elige una audiencia válida.", ok: false };
-  }
-
-  const supabase = await createClient();
-
-  const { data: match } = await supabase
-    .from("matches")
-    .select("organizer_id, datetime, court:courts(name)")
-    .eq("id", matchId)
-    .maybeSingle();
-
-  if (!match) return { message: "El partido ya no existe.", ok: false };
-  if (match.organizer_id !== session.userId) {
-    return { message: "Solo el organizador puede avisar.", ok: false };
-  }
-
-  const { data: subscriptions, error } = await supabase.rpc(
-    "resolve_audience_subscriptions",
-    { p_match_id: matchId, p_scope: scope }
-  );
-
-  if (error) return { message: "No se pudo resolver la audiencia.", ok: false };
-  if (!subscriptions || subscriptions.length === 0) {
-    return {
-      message: `Nadie en ${AUDIENCE_LABELS[scope as AudienceScope]} tiene notificaciones activadas.`,
-      ok: false,
-    };
-  }
-
-  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-  const vapidSubject = process.env.VAPID_SUBJECT;
-  if (!vapidPublicKey || !vapidPrivateKey || !vapidSubject) {
-    return { message: "Las notificaciones no están configuradas.", ok: false };
-  }
-  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
-
-  const courtName = (match.court as { name: string } | null)?.name ?? "la cancha";
-  const payload = JSON.stringify({
-    title: "Falta gente para una caimanera",
-    body: `Se necesitan jugadores en ${courtName}.`,
-    url: `/partidos/${matchId}`,
-  });
-
-  const deadEndpoints: string[] = [];
-  let sent = 0;
-  await Promise.all(
-    subscriptions.map(async (sub) => {
-      try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          payload
-        );
-        sent += 1;
-      } catch (err) {
-        const statusCode = (err as { statusCode?: number }).statusCode;
-        if (statusCode === 404 || statusCode === 410) {
-          deadEndpoints.push(sub.endpoint);
-        }
-        console.error("[notifyNeedPlayers] push send failed", statusCode, err);
-      }
-    })
-  );
-
-  if (deadEndpoints.length > 0) {
-    await supabase.from("push_subscriptions").delete().in("endpoint", deadEndpoints);
-  }
-
-  if (sent === 0) {
-    return {
-      message: "No se pudo entregar el aviso a nadie. Revisa la consola del servidor.",
-      ok: false,
-    };
-  }
-
-  return {
-    message: `Aviso enviado a ${sent} jugador(es) de ${AUDIENCE_LABELS[scope as AudienceScope]}.`,
-    ok: true,
-  };
-}

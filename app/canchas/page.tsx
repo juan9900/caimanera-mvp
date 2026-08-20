@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { verifySession, getCurrentUserProfile, getCourts } from "@/lib/auth/dal";
 import { CourtsMap } from "@/components/courts-map";
+import { sortCourtsForCreateMatchPicker } from "@/lib/courts/sort";
 
 export default async function CanchasPage() {
   const session = await verifySession();
@@ -11,7 +12,7 @@ export default async function CanchasPage() {
   const profile = await getCurrentUserProfile();
   if (!profile?.name) redirect("/onboarding");
 
-  const courts = await getCourts();
+  const courts = sortCourtsForCreateMatchPicker(await getCourts());
 
   return (
     <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">

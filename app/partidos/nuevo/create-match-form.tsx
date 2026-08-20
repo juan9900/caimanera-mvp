@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useActionState } from "react";
 import { createMatch } from "@/app/actions/matches";
 import { CourtPickerMap } from "@/components/court-picker-map";
-import { AmenityIcons } from "@/components/courts/amenity-icons";
+import { CourtPicker } from "@/components/courts/court-picker";
+import { VisibilityToggle } from "@/components/matches/visibility-toggle";
 import type { Court } from "@/lib/auth/dal";
 import { BANK_OPTIONS } from "@/lib/matches/definitions";
-import { isCourtSponsored, sortCourtsForPicker } from "@/lib/courts/sort";
+import { sortCourtsForCreateMatchPicker } from "@/lib/courts/sort";
 
 const INPUT_CLASSNAME =
   "mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface focus:border-primary-lime focus:outline-none";
@@ -16,10 +17,11 @@ const LABEL_CLASSNAME = "block font-label text-xs font-bold uppercase tracking-w
 export function CreateMatchForm({ courts }: { courts: Court[] }) {
   const [state, action, pending] = useActionState(createMatch, undefined);
   const [courtId, setCourtId] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
   const [totalSlots, setTotalSlots] = useState(10);
   const [paymentAmountBs, setPaymentAmountBs] = useState("");
   const mappableCourts = courts.filter((c) => c.lat != null && c.lng != null);
-  const sortedCourts = sortCourtsForPicker(courts);
+  const sortedCourts = sortCourtsForCreateMatchPicker(courts);
   const amountPerPerson =
     paymentAmountBs && totalSlots > 0
       ? Number(paymentAmountBs) / totalSlots
@@ -27,6 +29,14 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
 
   return (
     <form action={action} className="w-full space-y-5">
+      <div>
+        <span className={LABEL_CLASSNAME}>Visibilidad</span>
+        <input type="hidden" name="isPublic" value={isPublic ? "true" : "false"} />
+        <div className="mt-1">
+          <VisibilityToggle value={isPublic} onChange={setIsPublic} />
+        </div>
+      </div>
+
       <div>
         <span className={LABEL_CLASSNAME}>Cancha</span>
         {mappableCourts.length > 0 && (
@@ -42,39 +52,8 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
           </div>
         )}
         <input type="hidden" name="courtId" value={courtId} />
-        <div className="mt-1 grid gap-2">
-          {sortedCourts.map((court) => {
-            const selected = courtId === court.id;
-            const sponsored = isCourtSponsored(court);
-            return (
-              <label
-                key={court.id}
-                className={`flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 ${
-                  selected
-                    ? "border-primary-lime bg-primary-lime/10"
-                    : "border-surface-variant/50 bg-surface-container"
-                }`}
-              >
-                <input
-                  type="radio"
-                  checked={selected}
-                  onChange={() => setCourtId(court.id)}
-                  className="sr-only"
-                />
-                <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-2 font-body font-medium text-on-surface">
-                    {court.name}
-                    {sponsored && (
-                      <span className="rounded-full bg-secondary-container/30 px-2 py-0.5 font-label text-xs font-bold text-primary-lime">
-                        Patrocinado
-                      </span>
-                    )}
-                  </p>
-                  <AmenityIcons amenities={court.amenities} size="sm" tone="dark" className="mt-1.5" />
-                </div>
-              </label>
-            );
-          })}
+        <div className="mt-1">
+          <CourtPicker courts={sortedCourts} selectedId={courtId} onSelect={setCourtId} />
         </div>
         {state?.errors?.courtId && (
           <p className="mt-1 font-body text-sm text-dark-error">{state.errors.courtId[0]}</p>

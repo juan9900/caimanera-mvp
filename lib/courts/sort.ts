@@ -23,3 +23,25 @@ export function sortCourtsForPicker<T extends SortableCourt>(courts: T[]): T[] {
     return a.name.localeCompare(b.name);
   });
 }
+
+type CreateMatchSortableCourt = SortableCourt & Pick<Tables<"courts">, "is_official">;
+
+/**
+ * Orders courts for the create-match court picker: official courts first
+ * (there's only ever one today, but this doesn't assume that), then the same
+ * sponsorship/name tiebreak as `sortCourtsForPicker`.
+ */
+export function sortCourtsForCreateMatchPicker<T extends CreateMatchSortableCourt>(
+  courts: T[]
+): T[] {
+  return [...courts].sort((a, b) => {
+    if (a.is_official !== b.is_official) return a.is_official ? -1 : 1;
+    const aSponsored = isCourtSponsored(a);
+    const bSponsored = isCourtSponsored(b);
+    if (aSponsored !== bSponsored) return aSponsored ? -1 : 1;
+    if (aSponsored && bSponsored && a.sponsor_priority !== b.sponsor_priority) {
+      return b.sponsor_priority - a.sponsor_priority;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}

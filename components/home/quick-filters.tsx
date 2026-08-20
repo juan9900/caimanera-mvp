@@ -35,7 +35,7 @@ function Chip({
   );
 }
 
-/** Row of one-tap filter chips (sport, hoy, cerca de mí) that filter "Te necesitan ya" in-place. */
+/** Row of one-tap filter chips (sport, hoy, cerca de mí) that filter "Sesiones públicas" in-place. */
 export function QuickFilters({
   value,
   onChange,
@@ -55,16 +55,25 @@ export function QuickFilters({
   return (
     <div className="flex gap-2 overflow-x-auto px-4 py-3">
       {SPORT_CHIPS.map((sport) => (
-        <Chip key={sport} active={value.sports.includes(sport)} onClick={() => toggleSport(sport)}>
+        <Chip
+          key={sport}
+          active={value.sports.includes(sport)}
+          onClick={() => toggleSport(sport)}
+        >
           {SPORT_LABELS[sport]}
         </Chip>
       ))}
-      <Chip active={value.today} onClick={() => onChange({ ...value, today: !value.today })}>
+      <Chip
+        active={value.today}
+        onClick={() => onChange({ ...value, today: !value.today })}
+      >
         Hoy
       </Chip>
       <Chip
         active={value.nearMe}
-        onClick={() => nearMeAvailable && onChange({ ...value, nearMe: !value.nearMe })}
+        onClick={() =>
+          nearMeAvailable && onChange({ ...value, nearMe: !value.nearMe })
+        }
       >
         Cerca de mí
       </Chip>

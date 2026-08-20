@@ -1,4 +1,4 @@
-import { isCourtSponsored, sortCourtsForPicker } from "@/lib/courts/sort";
+import { isCourtSponsored, sortCourtsForPicker, sortCourtsForCreateMatchPicker } from "@/lib/courts/sort";
 
 const FUTURE = "2099-01-01T00:00:00.000Z";
 const PAST = "2020-01-01T00:00:00.000Z";
@@ -8,12 +8,14 @@ function makeCourt(overrides: Partial<{
   name: string;
   sponsored_until: string | null;
   sponsor_priority: number;
+  is_official: boolean;
 }> = {}) {
   return {
     id: "court-1",
     name: "Cancha Z",
     sponsored_until: null,
     sponsor_priority: 0,
+    is_official: false,
     ...overrides,
   };
 }
@@ -61,5 +63,25 @@ describe("sortCourtsForPicker", () => {
     const sorted = sortCourtsForPicker([expired, plain]);
 
     expect(sorted.map((c) => c.id)).toEqual(["plain", "expired"]);
+  });
+});
+
+describe("sortCourtsForCreateMatchPicker", () => {
+  it("puts the official court first, even ahead of a sponsored one", () => {
+    const sponsored = makeCourt({ id: "sponsored", name: "Alfa", sponsored_until: FUTURE });
+    const official = makeCourt({ id: "official", name: "Zeta", is_official: true });
+
+    const sorted = sortCourtsForCreateMatchPicker([sponsored, official]);
+
+    expect(sorted.map((c) => c.id)).toEqual(["official", "sponsored"]);
+  });
+
+  it("falls back to sponsorship then name among non-official courts", () => {
+    const plain = makeCourt({ id: "plain", name: "Beta" });
+    const sponsored = makeCourt({ id: "sponsored", name: "Zeta", sponsored_until: FUTURE });
+
+    const sorted = sortCourtsForCreateMatchPicker([plain, sponsored]);
+
+    expect(sorted.map((c) => c.id)).toEqual(["sponsored", "plain"]);
   });
 });

@@ -55,7 +55,10 @@ export function selectFeaturedCourts(
   const countByCourtId = new Map<string, number>();
   for (const match of openMatches) {
     if (!match.court_id) continue;
-    countByCourtId.set(match.court_id, (countByCourtId.get(match.court_id) ?? 0) + 1);
+    countByCourtId.set(
+      match.court_id,
+      (countByCourtId.get(match.court_id) ?? 0) + 1,
+    );
   }
 
   return officialCourts.map((court) => ({
@@ -65,7 +68,9 @@ export function selectFeaturedCourts(
 }
 
 /** Slots still needed to fill a match. */
-export function slotsNeeded(match: Pick<HomeMatch, "total_slots" | "slots_filled">): number {
+export function slotsNeeded(
+  match: Pick<HomeMatch, "total_slots" | "slots_filled">,
+): number {
   return Math.max(0, match.total_slots - match.slots_filled);
 }
 
@@ -86,7 +91,11 @@ export type HomeFilters = {
   search: string;
 };
 
-export const EMPTY_FILTERS: HomeFilters = { sports: [], today: false, search: "" };
+export const EMPTY_FILTERS: HomeFilters = {
+  sports: [],
+  today: false,
+  search: "",
+};
 
 function isToday(isoDatetime: string): boolean {
   const date = new Date(isoDatetime);
@@ -98,8 +107,11 @@ function isToday(isoDatetime: string): boolean {
   );
 }
 
-/** Filters matches in-place for the "Te necesitan ya" list: sport chips, "hoy" chip, and free-text search by court name. */
-export function filterMatches(matches: HomeMatch[], filters: HomeFilters): HomeMatch[] {
+/** Filters matches in-place for the "Sesiones públicas" list: sport chips, "hoy" chip, and free-text search by court name. */
+export function filterMatches(
+  matches: HomeMatch[],
+  filters: HomeFilters,
+): HomeMatch[] {
   const search = filters.search.trim().toLowerCase();
 
   return matches.filter((match) => {

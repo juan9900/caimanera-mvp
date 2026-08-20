@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 import type { HomeCourt, HomeMatch } from "@/lib/matches/home";
 import { sortCourtsForPicker } from "@/lib/courts/sort";
+import type { FriendRelation } from "@/lib/friends/definitions";
 
 export type Session = {
   userId: string;
@@ -136,7 +137,9 @@ export const getMyMatches = cache(async (): Promise<MatchWithCourt[]> => {
 /**
  * Fetches open matches, soonest first, with enough court fields (geo +
  * is_official) for the home screen. Private matches are excluded — see
- * `getOpenMatches`.
+ * `getOpenMatches`. Also excludes the current user's own matches — no point
+ * telling someone their own match "needs players" on the home feed (they
+ * already know; see `getMyMatches` for their own).
  */
 export const getOpenMatchesWithCourtGeo = cache(
   async (): Promise<HomeMatch[]> => {
@@ -151,6 +154,50 @@ export const getOpenMatchesWithCourtGeo = cache(
       )
       .eq("status", "abierto")
       .eq("is_public", true)
+      .neq("organizer_id", session.userId)
+      .order("datetime");
+
+    return (data as HomeMatch[] | null) ?? [];
+  },
+);
+
+/**
+ * Fetches open, private matches organized by one of the current user's
+ * accepted friends — the "De tus amigos" section on the home screen. Private
+ * matches are invite-only and normally hidden from browsing (see
+ * `getOpenMatches`), but a friend's private match should surface directly.
+ * RLS already allows reading any `status = "abierto"` match regardless of
+ * `is_public`, so this only needs the friend-id filter, not a policy change.
+ */
+export const getFriendsPrivateMatches = cache(
+  async (): Promise<HomeMatch[]> => {
+    const session = await verifySession();
+    if (!session) return [];
+
+    const supabase = await createClient();
+
+    const { data: friendships } = await supabase
+      .from("friendships")
+      .select("requester_id, addressee_id")
+      .eq("status", "aceptada")
+      .or(`requester_id.eq.${session.userId},addressee_id.eq.${session.userId}`);
+
+    const friendIds = (friendships ?? [])
+      .map((row) =>
+        row.requester_id === session.userId ? row.addressee_id : row.requester_id,
+      )
+      .filter((id): id is string => id !== null);
+
+    if (friendIds.length === 0) return [];
+
+    const { data } = await supabase
+      .from("matches")
+      .select(
+        "*, court:courts(id, name, lat, lng, is_official, photos, logo_url, amenities, promo_text, promo_code, promo_expires_at, sponsored_until, sponsor_priority), organizer:users!matches_organizer_id_fkey(name)",
+      )
+      .eq("status", "abierto")
+      .eq("is_public", false)
+      .in("organizer_id", friendIds)
       .order("datetime");
 
     return (data as HomeMatch[] | null) ?? [];
@@ -238,6 +285,38 @@ export const getMyParticipation = cache(
   },
 );
 
+export type MatchInvitation = {
+  participantId: string;
+  match: HomeMatch;
+};
+
+/**
+ * Fetches the current user's pending match invitations (`invitado` rows) —
+ * always private matches, since `invitado` only exists on those (see
+ * `inviteToMatch`). Soonest match first.
+ */
+export const getMyInvitations = cache(async (): Promise<MatchInvitation[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("match_participants")
+    .select(
+      "id, match:matches(*, court:courts(id, name, lat, lng, is_official, photos, logo_url, amenities, promo_text, promo_code, promo_expires_at, sponsored_until, sponsor_priority), organizer:users!matches_organizer_id_fkey(name))",
+    )
+    .eq("user_id", session.userId)
+    .eq("status", "invitado");
+
+  if (!data) return [];
+
+  return data
+    .filter((row): row is typeof row & { match: HomeMatch } => row.match !== null)
+    .filter((row) => row.match.status === "abierto")
+    .map((row) => ({ participantId: row.id, match: row.match }))
+    .sort((a, b) => a.match.datetime.localeCompare(b.match.datetime));
+});
+
 export type NetworkUser = Pick<
   UserProfile,
   "id" | "name" | "zone" | "created_at"
@@ -272,6 +351,134 @@ export const getMyInviter = cache(async (): Promise<NetworkUser | null> => {
 
   return data;
 });
+
+export type Friend = {
+  friendshipId: string;
+  user: NetworkUser;
+};
+
+/** Fetches the current user's accepted friends (either side of the pair), most recently accepted first. */
+export const getMyFriends = cache(async (): Promise<Friend[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("friendships")
+    .select(
+      "id, requester_id, addressee_id, requester:users!friendships_requester_id_fkey(id, name, zone, created_at), addressee:users!friendships_addressee_id_fkey(id, name, zone, created_at)"
+    )
+    .eq("status", "aceptada")
+    .or(`requester_id.eq.${session.userId},addressee_id.eq.${session.userId}`)
+    .order("responded_at", { ascending: false });
+
+  if (!data) return [];
+
+  return data
+    .map((row) => ({
+      friendshipId: row.id,
+      user: row.requester_id === session.userId ? row.addressee : row.requester,
+    }))
+    .filter((f): f is Friend => f.user !== null);
+});
+
+export type FriendRequest = {
+  friendshipId: string;
+  user: NetworkUser;
+};
+
+/** Fetches pending friend requests sent to the current user, most recent first. */
+export const getIncomingFriendRequests = cache(
+  async (): Promise<FriendRequest[]> => {
+    const session = await verifySession();
+    if (!session) return [];
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("friendships")
+      .select("id, requester:users!friendships_requester_id_fkey(id, name, zone, created_at)")
+      .eq("status", "pendiente")
+      .eq("addressee_id", session.userId)
+      .order("created_at", { ascending: false });
+
+    if (!data) return [];
+
+    return data
+      .filter((row) => row.requester !== null)
+      .map((row) => ({ friendshipId: row.id, user: row.requester as NetworkUser }));
+  },
+);
+
+/** Fetches pending friend requests the current user sent, most recent first. */
+export const getOutgoingFriendRequests = cache(
+  async (): Promise<FriendRequest[]> => {
+    const session = await verifySession();
+    if (!session) return [];
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("friendships")
+      .select("id, addressee:users!friendships_addressee_id_fkey(id, name, zone, created_at)")
+      .eq("status", "pendiente")
+      .eq("requester_id", session.userId)
+      .order("created_at", { ascending: false });
+
+    if (!data) return [];
+
+    return data
+      .filter((row) => row.addressee !== null)
+      .map((row) => ({ friendshipId: row.id, user: row.addressee as NetworkUser }));
+  },
+);
+
+export type UserSearchResult = NetworkUser & {
+  relation: FriendRelation;
+};
+
+/** Searches other users by name or phone, tagging each with the current friendship relation. */
+export const searchUsers = async (query: string): Promise<UserSearchResult[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+
+  const supabase = await createClient();
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, name, zone, created_at")
+    .neq("id", session.userId)
+    .or(`name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`)
+    .limit(20);
+
+  if (!users || users.length === 0) return [];
+
+  const ids = users.map((u) => u.id);
+  const { data: friendships } = await supabase
+    .from("friendships")
+    .select("requester_id, addressee_id, status")
+    .or(
+      `and(requester_id.eq.${session.userId},addressee_id.in.(${ids.join(",")})),and(addressee_id.eq.${session.userId},requester_id.in.(${ids.join(",")}))`
+    );
+
+  const relationByUserId = new Map<string, FriendRelation>();
+  for (const f of friendships ?? []) {
+    const otherId = f.requester_id === session.userId ? f.addressee_id : f.requester_id;
+    if (f.status === "aceptada") {
+      relationByUserId.set(otherId, "amigos");
+    } else if (f.status === "pendiente") {
+      relationByUserId.set(
+        otherId,
+        f.requester_id === session.userId ? "pendiente_enviada" : "pendiente_recibida"
+      );
+    }
+  }
+
+  return users.map((user) => ({
+    ...user,
+    relation: relationByUserId.get(user.id) ?? "ninguna",
+  }));
+};
 
 /** Whether the current user has the `is_admin` flag set. */
 export const getIsAdmin = cache(async (): Promise<boolean> => {

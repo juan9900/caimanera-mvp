@@ -62,7 +62,7 @@ export function BottomNavInner() {
           <Link
             href="/partidos/nuevo"
             aria-label="Crear partido"
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-lime text-on-primary shadow-[0_8px_24px_rgba(195,244,0,0.4)] transition-transform active:scale-90"
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-lime text-on-primary shadow-md transition-transform active:scale-90"
           >
             <Plus aria-hidden size={32} strokeWidth={2.25} />
           </Link>

@@ -7,11 +7,13 @@ import {
   getMatch,
   getMatchParticipants,
   getMyParticipation,
+  getMyFriends,
 } from "@/lib/auth/dal";
 import {
   joinMatch,
   leaveMatch,
   respondToRequest,
+  respondToInvitation,
   removeParticipant,
   cancelMatch,
   reopenMatch,
@@ -19,8 +21,8 @@ import {
 } from "@/app/actions/matches";
 import { ShareMatchButton } from "@/components/share-match-button";
 import { MatchActionForm } from "@/components/match-action-form";
-import { NotifyNeedPlayersForm } from "@/components/notify-need-players-form";
-import { EnableNotifications } from "@/components/enable-notifications";
+import { MatchVisibilitySwitch } from "@/components/matches/match-visibility-switch";
+import { InviteFriends } from "@/components/matches/invite-friends";
 
 const SPORT_LABELS: Record<string, string> = {
   futbol: "Fútbol",
@@ -67,12 +69,22 @@ export default async function MatchDetailPage(
   const isOrganizer = match.organizer_id === session.userId;
   const participants = await getMatchParticipants(id);
   const myParticipation = isOrganizer ? null : await getMyParticipation(id);
+  const friends = isOrganizer && match.status === "abierto" ? await getMyFriends() : [];
 
   const confirmed = participants.filter((p) => p.status === "confirmado");
   const pending = participants.filter((p) => p.status === "pendiente");
+  const invited = participants.filter((p) => p.status === "invitado");
 
   return (
     <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
+      <div className="mb-4">
+        <MatchVisibilitySwitch
+          matchId={match.id}
+          initialIsPublic={match.is_public}
+          editable={isOrganizer}
+        />
+      </div>
+
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-2xl font-bold">
@@ -170,57 +182,21 @@ export default async function MatchDetailPage(
         </dl>
       )}
 
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <p className="font-label text-xs text-on-surface-variant">
-          {match.slots_filled}/{match.total_slots} cupos ocupados
-        </p>
-        <EnableNotifications />
-      </div>
-
-      {isOrganizer &&
-        match.status === "abierto" &&
-        match.slots_filled < match.total_slots && (
-          <div className="mt-4">
-            <NotifyNeedPlayersForm matchId={match.id} />
-          </div>
-        )}
+      <p className="mt-6 font-label text-xs text-on-surface-variant">
+        {match.slots_filled}/{match.total_slots} cupos ocupados
+      </p>
 
       <div className="mt-6">
         {isOrganizer ? (
-          <div className="flex flex-wrap items-center gap-3">
-            {match.status === "vencido" && (
-              <MatchActionForm
-                action={reopenMatch}
-                hiddenFields={{ matchId: match.id }}
-                label="Pedir más jugadores"
-                pendingLabel="Reabriendo…"
-                className={PRIMARY_BUTTON}
-              />
-            )}
-            {match.status !== "cancelado" && (
-              <MatchActionForm
-                action={cancelMatch}
-                hiddenFields={{ matchId: match.id }}
-                label="Cancelar partido"
-                pendingLabel="Cancelando…"
-                className={DANGER_BUTTON}
-              />
-            )}
-            <div>
-              <MatchActionForm
-                action={setMatchVisibility}
-                hiddenFields={{ matchId: match.id, isPublic: match.is_public ? "false" : "true" }}
-                label={match.is_public ? "Hacer privada" : "Hacer pública"}
-                pendingLabel="Cambiando…"
-                className={OUTLINE_BUTTON}
-              />
-              <p className="mt-1 font-body text-xs text-on-surface-variant">
-                {match.is_public
-                  ? "Cualquiera puede verla en el inicio y en Partidos."
-                  : "Solo entra quien tenga el link — no aparece en el inicio ni en Partidos."}
-              </p>
-            </div>
-          </div>
+          match.status === "vencido" && (
+            <MatchActionForm
+              action={reopenMatch}
+              hiddenFields={{ matchId: match.id }}
+              label="Pedir más jugadores"
+              pendingLabel="Reabriendo…"
+              className={PRIMARY_BUTTON}
+            />
+          )
         ) : match.status === "cancelado" || match.status === "vencido" ? null : myParticipation ? (
           myParticipation.status === "confirmado" ? (
             <MatchActionForm
@@ -230,6 +206,26 @@ export default async function MatchDetailPage(
               pendingLabel="Saliendo…"
               className={OUTLINE_BUTTON}
             />
+          ) : myParticipation.status === "invitado" ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="font-body text-sm text-on-surface-variant">
+                Te invitaron a este partido.
+              </p>
+              <MatchActionForm
+                action={respondToInvitation}
+                hiddenFields={{ participantId: myParticipation.id, matchId: match.id, accept: "true" }}
+                label="Aceptar"
+                pendingLabel="Aceptando…"
+                className={PRIMARY_BUTTON}
+              />
+              <MatchActionForm
+                action={respondToInvitation}
+                hiddenFields={{ participantId: myParticipation.id, matchId: match.id, accept: "false" }}
+                label="Rechazar"
+                pendingLabel="Rechazando…"
+                className={SMALL_OUTLINE_BUTTON}
+              />
+            </div>
           ) : myParticipation.status === "pendiente" ? (
             <div className="flex flex-wrap items-center gap-3">
               <p className="font-body text-sm text-on-surface-variant">
@@ -257,7 +253,7 @@ export default async function MatchDetailPage(
               />
             </div>
           )
-        ) : (
+        ) : match.is_public ? (
           <MatchActionForm
             action={joinMatch}
             hiddenFields={{ matchId: match.id }}
@@ -265,8 +261,60 @@ export default async function MatchDetailPage(
             pendingLabel="Uniendo…"
             className={PRIMARY_BUTTON}
           />
+        ) : (
+          <p className="font-body text-sm text-on-surface-variant">
+            Este partido es privado — solo entra quien reciba una invitación.
+          </p>
         )}
       </div>
+
+      {isOrganizer && match.status === "abierto" && match.slots_filled < match.total_slots && (
+        <div className="mt-8">
+          <h2 className="mb-3 font-display text-lg font-bold text-on-surface">
+            Invitar jugadores
+          </h2>
+          <InviteFriends
+            matchId={match.id}
+            friends={friends}
+            excludedUserIds={participants.map((p) => p.user_id)}
+          />
+          {!match.is_public && (
+            <div className="mt-4 rounded-xl border border-dashed border-primary-lime/50 bg-secondary-container/20 p-4">
+              <p className="font-body text-sm text-on-surface">
+                ¿Sigues necesitando gente? Hazla pública para que cualquiera pueda verla y unirse.
+              </p>
+              <MatchActionForm
+                action={setMatchVisibility}
+                hiddenFields={{ matchId: match.id, isPublic: "true" }}
+                label="Hacer pública"
+                pendingLabel="Actualizando…"
+                className={`${SMALL_PRIMARY_BUTTON} mt-3`}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {isOrganizer && invited.length > 0 && (
+        <div className="mt-8">
+          <h2 className="mb-3 font-display text-lg font-bold text-on-surface">
+            Invitados ({invited.length})
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {invited.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3"
+              >
+                <span className="font-body text-on-surface">{p.user?.name ?? "Jugador"}</span>
+                <span className="rounded-full bg-surface-variant px-2 py-0.5 font-label text-xs font-bold text-on-surface-variant">
+                  Sin responder
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {isOrganizer && pending.length > 0 && (
         <div className="mt-8">
@@ -354,6 +402,18 @@ export default async function MatchDetailPage(
           </ul>
         )}
       </div>
+
+      {isOrganizer && match.status !== "cancelado" && (
+        <div className="mt-8">
+          <MatchActionForm
+            action={cancelMatch}
+            hiddenFields={{ matchId: match.id }}
+            label="Cancelar partido"
+            pendingLabel="Cancelando…"
+            className={DANGER_BUTTON}
+          />
+        </div>
+      )}
 
       <Link
         href="/partidos"

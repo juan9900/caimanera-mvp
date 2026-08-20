@@ -3,6 +3,7 @@
 import { requireSession } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import { PushSubscriptionSchema } from "@/lib/push/definitions";
+import { sendPushToSubscriptions } from "@/lib/push/send";
 
 /** Saves (or refreshes) the current user's Web Push subscription. */
 export async function savePushSubscription(
@@ -47,4 +48,33 @@ export async function deletePushSubscription(
   if (error) return { message: "No se pudo desactivar las notificaciones." };
 
   return {};
+}
+
+/**
+ * Sends a notification to the current user's own devices. This is the only
+ * way to check the whole chain — permission, subscription, VAPID keys, service
+ * worker — from the phone itself, without waiting for someone else to create a
+ * match. Reads through the request-scoped client on purpose: RLS already
+ * limits it to the caller's own subscriptions.
+ */
+export async function sendTestNotification(): Promise<{ message: string }> {
+  const session = await requireSession();
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("push_subscriptions")
+    .select("endpoint, p256dh, auth")
+    .eq("user_id", session.userId);
+
+  if (!data || data.length === 0) {
+    return { message: "Este dispositivo no está suscrito todavía." };
+  }
+
+  await sendPushToSubscriptions(data, {
+    title: "Caimanera",
+    body: "Notificación de prueba: todo funciona.",
+    url: "/",
+  });
+
+  return { message: "Notificación enviada. Debería llegarte en unos segundos." };
 }

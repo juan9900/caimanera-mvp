@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Bell, Check } from "lucide-react";
 import { updateNotificationScopes } from "@/app/actions/profile";
+import { sendTestNotification } from "@/app/actions/push";
 import { EnableNotifications } from "@/components/enable-notifications";
 
 const NOTIFICATION_OPTIONS = [
@@ -27,6 +28,14 @@ export function NotificationPreferences({
     startTransition(async () => {
       const result = await updateNotificationScopes(next);
       setMessage(result.message ?? "Preferencias guardadas.");
+    });
+  }
+
+  function testNotification() {
+    setMessage(null);
+    startTransition(async () => {
+      const result = await sendTestNotification();
+      setMessage(result.message);
     });
   }
 
@@ -55,6 +64,7 @@ export function NotificationPreferences({
             }
           }}
           onStatusChange={setPushEnabled}
+          onMessage={setMessage}
         />
       </div>
 
@@ -98,6 +108,17 @@ export function NotificationPreferences({
           })}
         </div>
       </fieldset>
+
+      {pushEnabled && (
+        <button
+          type="button"
+          onClick={testNotification}
+          disabled={isPending}
+          className="mt-4 font-body text-xs text-primary-lime underline underline-offset-4 disabled:opacity-50"
+        >
+          Enviar notificación de prueba
+        </button>
+      )}
 
       {message && <p className="mt-3 font-body text-xs text-on-surface-variant">{message}</p>}
     </section>

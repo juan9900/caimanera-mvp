@@ -2,7 +2,6 @@
 
 import { useActionState, useState } from "react";
 import { completeOnboarding } from "@/app/actions/profile";
-import { subscribeToPush } from "@/lib/push/subscribe-client";
 
 const NOTIFICATION_OPTIONS = [
   { value: "red", label: "Personas de mi red" },
@@ -13,7 +12,6 @@ const NOTIFICATION_OPTIONS = [
 export function OnboardingForm() {
   const [state, action, pending] = useActionState(completeOnboarding, undefined);
   const [notificationScopes, setNotificationScopes] = useState<string[]>([]);
-  const [subscribing, setSubscribing] = useState(false);
 
   const noNotifications = notificationScopes.length === 0;
 
@@ -23,17 +21,8 @@ export function OnboardingForm() {
     );
   }
 
-  async function handleSubmit(formData: FormData) {
-    if (notificationScopes.length > 0) {
-      setSubscribing(true);
-      await subscribeToPush();
-      setSubscribing(false);
-    }
-    action(formData);
-  }
-
   return (
-    <form action={handleSubmit} className="w-full max-w-sm space-y-5">
+    <form action={action} className="w-full max-w-sm space-y-5">
       <div>
         <label htmlFor="name" className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
           Nombre
@@ -120,16 +109,22 @@ export function OnboardingForm() {
         {state?.errors?.notificationScopes && (
           <p className="mt-1 font-body text-sm text-dark-error">{state.errors.notificationScopes[0]}</p>
         )}
+        {!noNotifications && (
+          <p className="mt-2 font-body text-xs text-on-surface-variant">
+            Falta un paso: el permiso del teléfono se pide desde Ajustes, con el
+            interruptor de notificaciones.
+          </p>
+        )}
       </fieldset>
 
       {state?.message && <p className="font-body text-sm text-dark-error">{state.message}</p>}
 
       <button
-        disabled={pending || subscribing}
+        disabled={pending}
         type="submit"
         className="w-full rounded-lg bg-primary-lime px-4 py-2.5 font-display text-sm font-bold uppercase tracking-wide text-on-primary shadow-[0_4px_12px_rgba(195,244,0,0.2)] disabled:opacity-50"
       >
-        {pending || subscribing ? "Guardando..." : "Guardar y continuar"}
+        {pending ? "Guardando..." : "Guardar y continuar"}
       </button>
     </form>
   );

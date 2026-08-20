@@ -20,6 +20,33 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Variables de entorno
+
+Copiá `.env.example` a `.env.local` y completá los valores.
+
+### Notificaciones push (Web Push / VAPID)
+
+Generá un par de claves una sola vez:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+| Variable | Dónde vive | Notas |
+| --- | --- | --- |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | cliente + servidor | Se **inlinea en tiempo de build**. Si la cambiás en el panel del hosting, hay que redeployar para que tome efecto. |
+| `VAPID_PRIVATE_KEY` | solo servidor | Nunca la prefijes con `NEXT_PUBLIC_`. |
+| `VAPID_SUBJECT` | solo servidor | `mailto:` de contacto, lo exige el estándar. |
+| `SUPABASE_SERVICE_ROLE_KEY` | solo servidor | Necesaria para notificar a otros usuarios: la RLS de `push_subscriptions` limita cada fila a su dueño. |
+
+Sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` el navegador no puede suscribirse, y la app
+muestra "Las notificaciones no están configuradas en este servidor" en Ajustes.
+
+En **iOS** las notificaciones web solo funcionan con la app agregada a la
+pantalla de inicio (modo standalone): en una pestaña normal de Safari el
+navegador ni siquiera expone `PushManager`.
+
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

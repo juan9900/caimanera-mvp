@@ -5,17 +5,32 @@ import {
   getPushSubscriptionStatus,
   subscribeToPush,
   unsubscribeFromPush,
+  type SubscribeResult,
 } from "@/lib/push/subscribe-client";
 
 type Status = "unsupported" | "ios-install" | "checking" | "denied" | "enabled" | "disabled";
+
+/**
+ * Why a subscribe attempt failed, in the user's words. Without this the
+ * toggle just flips back to off and there is nothing to act on — which is
+ * exactly how a deployment missing its VAPID key looks from a phone.
+ */
+const FAILURE_MESSAGES: Partial<Record<SubscribeResult, string>> = {
+  misconfigured:
+    "Las notificaciones no están configuradas en este servidor. Avísale al equipo.",
+  unsupported: "Este navegador no soporta notificaciones.",
+  error: "No se pudo activar las notificaciones. Intenta de nuevo.",
+};
 
 /** Lets the current user opt in/out of Web Push notifications for this device. */
 export function EnableNotifications({
   onEnabled,
   onStatusChange,
+  onMessage,
 }: {
   onEnabled?: () => void;
   onStatusChange?: (enabled: boolean) => void;
+  onMessage?: (message: string | null) => void;
 } = {}) {
   const [status, setStatus] = useState<Status>("checking");
   const [pending, setPending] = useState(false);
@@ -39,10 +54,12 @@ export function EnableNotifications({
 
   async function enable() {
     setPending(true);
+    onMessage?.(null);
     try {
       const result = await subscribeToPush();
       setStatus(result === "enabled" || result === "denied" ? result : "disabled");
       if (result === "enabled") onEnabled?.();
+      else onMessage?.(FAILURE_MESSAGES[result] ?? null);
     } finally {
       setPending(false);
     }
@@ -50,6 +67,7 @@ export function EnableNotifications({
 
   async function disable() {
     setPending(true);
+    onMessage?.(null);
     try {
       await unsubscribeFromPush();
       setStatus("disabled");

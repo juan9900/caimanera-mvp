@@ -40,7 +40,7 @@ app/
     matches.ts      crear partido, unirse (públicos), invitar/responder invitación (públicos y privados), aprobar/rechazar, cambiar visibilidad
     courts.ts       agregar/editar cancha
     profile.ts      onboarding / editar perfil
-    push.ts         guardar/borrar suscripción push
+    push.ts         guardar/borrar suscripción push, enviar notificación de prueba
     friends.ts      enviar/aceptar/rechazar/cancelar solicitud de amistad, eliminar amigo, buscar usuarios
   (rutas)/          una carpeta por ruta, `page.tsx` server + a veces un `*-form.tsx` cliente al lado (incluye `invitaciones/`, la página de invitaciones a partidos)
   admin/            panel simple (solo `is_admin`), sin nav propia — ve usuarios, partidos, canchas, métricas
@@ -53,9 +53,11 @@ lib/
   matches/, courts/, push/, friends/
     definitions.ts  esquemas Zod + tipos de formulario por dominio
     home.ts, sort.ts, amenities.ts   lógica de negocio pura (ordenar, filtrar) — testeada en tests/unit
+    push/send.ts, push/match-notifications.ts   envío Web Push (server-only) + copy/destinatarios por evento
   supabase/
     server.ts       cliente Supabase para Server Components/Actions (cookies de next/headers)
     client.ts        cliente Supabase para Client Components (browser)
+    admin.ts        cliente service-role (saltea RLS) — SOLO para el envío de push
     proxy.ts         refresca el token de sesión (llamado desde el middleware/proxy de Next)
     database.types.ts  tipos generados desde el esquema real de Supabase (no editar a mano)
   geo/distance.ts   cálculo de distancia para ordenar por cercanía
@@ -96,13 +98,49 @@ Regla de negocio clave que se repite en el código: **nunca hay pagos dentro de 
 
 ## Notificaciones push
 
-- El usuario activa notificaciones desde `components/enable-notifications.tsx`, que registra el `sw.js` y guarda la suscripción vía la action `savePushSubscription`.
-- El envío real ocurre desde Server Actions (ej. al crear partido o pedir "faltan jugadores" en `app/actions/matches.ts`) usando `webpush` contra las suscripciones guardadas.
-- `public/sw.js` es el service worker que recibe el push y muestra la notificación / maneja el click.
+**Suscripción (cliente).** El usuario activa el toggle en `components/enable-notifications.tsx`
+→ `subscribeToPush()` (`lib/push/subscribe-client.ts`) → la action `savePushSubscription`.
+`Notification.requestPermission()` es lo **primero** que corre y tiene que
+llamarse desde un gesto del usuario: iOS solo muestra el prompt nativo mientras
+la página conserva user activation, y cualquier `await` previo lo pierde. Por eso
+el onboarding ya no pide el permiso dentro de su form action — solo guarda los
+scopes y remite a Ajustes.
+
+**Envío (servidor).** `lib/push/send.ts` (`server-only`) envuelve `web-push`:
+- `notifyUsers(userIds, payload)` — destinatarios concretos.
+- `notifyMatchAudience(supabase, matchId, payload)` — difusión "faltan jugadores",
+  uniendo los scopes de `AUDIENCE_SCOPES` vía la función SQL
+  `resolve_audience_subscriptions` y deduplicando por endpoint.
+- Todo es best-effort: nunca lanza (una notificación caída no puede tumbar la
+  action que ya escribió), y ante 404/410 borra la suscripción muerta.
+
+Los textos y la búsqueda de destinatarios viven en `lib/push/match-notifications.ts`,
+para que `app/actions/matches.ts` siga tratando de la escritura. Disparadores:
+`createMatch` (solo públicos → audiencia), `inviteToMatch`, `joinMatch` (avisa al
+organizador), `respondToRequest` (solo al aprobar), `cancelMatch` y `reopenMatch`
+(participantes confirmados). `sendTestNotification` en `app/actions/push.ts`
+manda una notificación al propio usuario para verificar la cadena completa.
+
+**RLS.** `push_subscriptions` está limitada a su dueño, así que notificar a otros
+usuarios usa el cliente service-role de `lib/supabase/admin.ts` — es el único
+lugar que lo usa. La alternativa (una función `SECURITY DEFINER` genérica) tendría
+que ser ejecutable por `authenticated`, lo que le daría a cualquier usuario logueado
+las claves push del resto.
+
+**Variables de entorno:** `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (se inlinea en build →
+cambiarla exige redeploy), `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y
+`SUPABASE_SERVICE_ROLE_KEY`. Si falta la pública, el toggle muestra
+"no están configuradas en este servidor" en vez de fallar en silencio. Ver `.env.example`.
+
+**iOS:** solo funciona con la PWA agregada a la pantalla de inicio (standalone);
+en una pestaña de Safari `PushManager` no existe (`needsIosInstall()`).
+
+`public/sw.js` es el service worker que recibe el push (`{ title, body, url }`),
+muestra la notificación y maneja el click.
 
 ## Testing
 
-- `tests/unit/` — Jest, sobre todo lógica pura de `lib/` (orden de canchas, home, definitions/Zod, dal).
+- `tests/unit/` — Jest, sobre todo lógica pura de `lib/` (orden de canchas, home, definitions/Zod, dal, envío de push).
 - `tests/e2e/` — Playwright, flujo de home end-to-end.
 
 ## Notas para trabajar con Claude Code en este repo

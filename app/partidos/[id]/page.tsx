@@ -25,10 +25,8 @@ import { MatchActionForm } from "@/components/match-action-form";
 import { MatchVisibilitySwitch } from "@/components/matches/match-visibility-switch";
 import { InviteFriends } from "@/components/matches/invite-friends";
 import { InviteGroup } from "@/components/matches/invite-group";
+import { SPORT_LABELS } from "@/lib/matches/home";
 
-const SPORT_LABELS: Record<string, string> = {
-  futbol: "Fútbol",
-};
 const VIBE_LABELS: Record<string, string> = {
   relajado: "Relajado",
   competitivo: "Competitivo",

@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { SPORT_OPTIONS } from "@/lib/auth/definitions";
+import { SPORT_CATALOG_KEYS } from "@/lib/courts/sports";
 
 export const BANK_OPTIONS = [
   "Banesco",
@@ -22,7 +22,7 @@ const emptyToUndefined = (value: unknown) =>
 export const CreateMatchFormSchema = z
   .object({
     courtId: z.uuid({ error: "Selecciona una cancha." }),
-    sport: z.enum(SPORT_OPTIONS, { error: "Selecciona un deporte." }),
+    sport: z.enum(SPORT_CATALOG_KEYS, { error: "Selecciona un deporte." }),
     datetime: z.coerce
       .date({ error: "Ingresa una fecha y hora válidas." })
       .refine((date) => date.getTime() > Date.now(), {

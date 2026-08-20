@@ -5,41 +5,51 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { haversineKm, formatDistance, type LatLng } from "@/lib/geo/distance";
 import {
+  filterCourtsByRadius,
   filterMatches,
+  filterMatchesByRadius,
+  RADIUS_EXPANSION_STEPS_KM,
   selectFeaturedCourts,
+  smallestRadiusWithResults,
   sortByUrgency,
   type HomeCourt,
   type HomeMatch,
 } from "@/lib/matches/home";
-import type { MatchInvitation } from "@/lib/auth/dal";
-import { QuickFilters, type QuickFilterState } from "@/components/home/quick-filters";
+import type { MatchInvitation, Court, UserLocation } from "@/lib/auth/dal";
 import { FeaturedCourtsCarousel } from "@/components/home/featured-courts-carousel";
+import { NearbyMapCard } from "@/components/home/nearby-map-card";
 import { InvitationsSection } from "@/components/home/invitations-section";
 import { FriendsMatches } from "@/components/home/friends-matches";
 import { NeededMatches } from "@/components/home/needed-matches";
 
 const REALTIME_REFRESH_DEBOUNCE_MS = 800;
 
-/** Orchestrates the home screen: search, quick filters, geolocation, and live match updates. */
+/** Orchestrates the home screen: sport filter, saved-location radius, and live match updates. */
 export function HomeClient({
   matches,
   friendsMatches,
   invitations,
   officialCourts,
+  allCourts,
+  userLocation,
 }: {
   matches: HomeMatch[];
   friendsMatches: HomeMatch[];
   invitations: MatchInvitation[];
   officialCourts: HomeCourt[];
+  allCourts: Court[];
+  userLocation: UserLocation | null;
 }) {
   const router = useRouter();
-  const [filters, setFilters] = useState<QuickFilterState>({
-    sports: [],
-    today: false,
-    nearMe: false,
-  });
-  const [position, setPosition] = useState<LatLng | null>(null);
-  const [geoDenied, setGeoDenied] = useState(false);
+  const [sportFilter, setSportFilter] = useState<string[]>([]);
+  const [radiusStepIndex, setRadiusStepIndex] = useState(0);
+
+  const locationPos = useMemo<LatLng | null>(
+    () => (userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null),
+    [userLocation],
+  );
+  const radiusKm = RADIUS_EXPANSION_STEPS_KM[radiusStepIndex];
+  const canExpandRadius = radiusStepIndex < RADIUS_EXPANSION_STEPS_KM.length - 1;
 
   // Realtime: keep slot counts fresh without a manual refresh.
   useEffect(() => {
@@ -64,30 +74,16 @@ export function HomeClient({
     };
   }, [router]);
 
-  function requestLocation() {
-    if (!("geolocation" in navigator)) {
-      setGeoDenied(true);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (result) => {
-        setPosition({ lat: result.coords.latitude, lng: result.coords.longitude });
-        setGeoDenied(false);
-      },
-      () => {
-        setGeoDenied(true);
-        setFilters((f) => ({ ...f, nearMe: false }));
-      },
+  function toggleSport(sportKey: string) {
+    setSportFilter((current) =>
+      current.includes(sportKey)
+        ? current.filter((s) => s !== sportKey)
+        : [...current, sportKey],
     );
   }
 
-  function handleFiltersChange(next: QuickFilterState) {
-    if (next.nearMe && !position && !geoDenied) requestLocation();
-    setFilters(next);
-  }
-
   const distanceByCourtId = useMemo(() => {
-    if (!position) return undefined;
+    if (!locationPos) return undefined;
     const map = new Map<string, string>();
     const allCourts = [
       ...officialCourts,
@@ -97,52 +93,47 @@ export function HomeClient({
     ];
     for (const court of allCourts) {
       if (map.has(court.id)) continue;
-      map.set(court.id, formatDistance(haversineKm(position, { lat: court.lat, lng: court.lng })));
+      map.set(court.id, formatDistance(haversineKm(locationPos, { lat: court.lat, lng: court.lng })));
     }
     return map;
-  }, [position, officialCourts, matches, friendsMatches, invitations]);
+  }, [locationPos, officialCourts, matches, friendsMatches, invitations]);
+
+  // Featured courts are scoped to the user's saved location, widening the
+  // radius automatically (no manual control) until at least one shows up.
+  // If nothing is close even at the widest step, show none rather than
+  // falling back to every official court in the app.
+  const nearbyOfficialCourts = useMemo(() => {
+    if (!locationPos) return officialCourts;
+    const radius = smallestRadiusWithResults(officialCourts, locationPos);
+    return radius == null ? [] : filterCourtsByRadius(officialCourts, locationPos, radius);
+  }, [officialCourts, locationPos]);
 
   const featuredCourts = useMemo(
-    () => selectFeaturedCourts(officialCourts, matches),
-    [officialCourts, matches],
+    () => selectFeaturedCourts(nearbyOfficialCourts, matches),
+    [nearbyOfficialCourts, matches],
   );
 
+  // "Sesiones públicas" defaults to DEFAULT_RADIUS_KM from the user's saved
+  // location; `radiusStepIndex` lets them widen it manually when empty.
+  const matchesNearLocation = useMemo(() => {
+    if (!locationPos) return matches;
+    return filterMatchesByRadius(matches, locationPos, radiusKm);
+  }, [matches, locationPos, radiusKm]);
+
   const visibleMatches = useMemo(() => {
-    const filtered = filterMatches(matches, {
-      sports: filters.sports,
-      today: filters.today,
+    const filtered = filterMatches(matchesNearLocation, {
+      sports: sportFilter,
+      today: false,
       search: "",
     });
-
-    if (filters.nearMe && position) {
-      return [...filtered].sort((a, b) => {
-        if (!a.court) return 1;
-        if (!b.court) return -1;
-        return (
-          haversineKm(position, a.court) - haversineKm(position, b.court)
-        );
-      });
-    }
-
     return sortByUrgency(filtered);
-  }, [matches, filters, position]);
+  }, [matchesNearLocation, sportFilter]);
 
   return (
     <div className="flex flex-1 flex-col gap-8 bg-surface pb-8 text-on-surface">
       <FeaturedCourtsCarousel courts={featuredCourts} distanceByCourtId={distanceByCourtId} />
 
-      <div className="flex flex-col gap-2">
-        <QuickFilters
-          value={filters}
-          onChange={handleFiltersChange}
-          nearMeAvailable={!geoDenied}
-        />
-        {filters.nearMe && geoDenied && (
-          <p className="px-4 font-body text-xs text-on-surface-variant">
-            No pudimos usar tu ubicación. Activa el permiso de ubicación para ordenar por cercanía.
-          </p>
-        )}
-      </div>
+      <NearbyMapCard courts={allCourts} userLocation={userLocation} />
 
       <InvitationsSection invitations={invitations} distanceByCourtId={distanceByCourtId} />
 
@@ -152,6 +143,14 @@ export function HomeClient({
         matches={visibleMatches}
         hasAnyPublicMatches={matches.length > 0}
         distanceByCourtId={distanceByCourtId}
+        radiusKm={locationPos ? radiusKm : undefined}
+        canExpandRadius={canExpandRadius}
+        showExpandRadius={
+          !!locationPos && matchesNearLocation.length === 0 && matches.length > 0
+        }
+        onExpandRadius={() => setRadiusStepIndex((i) => Math.min(i + 1, RADIUS_EXPANSION_STEPS_KM.length - 1))}
+        sportFilter={sportFilter}
+        onToggleSport={toggleSport}
       />
     </div>
   );

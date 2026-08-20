@@ -7,8 +7,7 @@ import {
   getMyMatches,
   type MatchWithCourt,
 } from "@/lib/auth/dal";
-
-const SPORT_LABELS: Record<string, string> = { futbol: "Fútbol" };
+import { SPORT_LABELS } from "@/lib/matches/home";
 const VIBE_LABELS: Record<string, string> = {
   relajado: "Relajado",
   competitivo: "Competitivo",

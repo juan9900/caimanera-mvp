@@ -1,8 +1,11 @@
 import { haversineKm, formatDistance } from "@/lib/geo/distance";
 import {
+  filterCourtsByRadius,
   filterMatches,
+  filterMatchesByRadius,
   selectFeaturedCourts,
   slotsNeeded,
+  smallestRadiusWithResults,
   sortByUrgency,
   type HomeCourt,
   type HomeMatch,
@@ -14,6 +17,8 @@ function makeCourt(overrides: Partial<HomeCourt> = {}): HomeCourt {
     name: "Cancha Ancla",
     lat: 10.65,
     lng: -71.64,
+    address: null,
+    sports: [],
     is_official: true,
     photos: null,
     logo_url: null,
@@ -132,5 +137,37 @@ describe("selectFeaturedCourts", () => {
       { court: courts[0], openMatchCount: 2 },
       { court: courts[1], openMatchCount: 0 },
     ]);
+  });
+});
+
+describe("radius filtering", () => {
+  const maracaibo = { lat: 10.65, lng: -71.64 };
+  // Caracas: ~500km from Maracaibo, well outside every RADIUS_EXPANSION_STEPS_KM step.
+  const caracas = { lat: 10.4806, lng: -66.9036 };
+  const nearby = makeCourt({ id: "court-near", lat: 10.6, lng: -71.6 });
+  const farAway = makeCourt({ id: "court-far", ...caracas });
+
+  it("filterCourtsByRadius keeps only courts within range", () => {
+    const result = filterCourtsByRadius([nearby, farAway], maracaibo, 15);
+    expect(result.map((c) => c.id)).toEqual(["court-near"]);
+  });
+
+  it("filterCourtsByRadius drops everything when nothing is close enough", () => {
+    const midAtlantic = { lat: 20, lng: -40 };
+    expect(filterCourtsByRadius([nearby, farAway], midAtlantic, 15)).toEqual([]);
+  });
+
+  it("filterMatchesByRadius drops matches without a court and those out of range", () => {
+    const inRange = makeMatch({ id: "in-range", court: nearby, court_id: nearby.id });
+    const outOfRange = makeMatch({ id: "out-of-range", court: farAway, court_id: farAway.id });
+    const noCourt = makeMatch({ id: "no-court", court: null });
+
+    const result = filterMatchesByRadius([inRange, outOfRange, noCourt], maracaibo, 15);
+    expect(result.map((m) => m.id)).toEqual(["in-range"]);
+  });
+
+  it("smallestRadiusWithResults returns the first step with a match, or null", () => {
+    expect(smallestRadiusWithResults([nearby], maracaibo)).toBe(15);
+    expect(smallestRadiusWithResults([farAway], maracaibo)).toBeNull();
   });
 });

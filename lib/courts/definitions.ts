@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { AMENITY_KEYS } from "@/lib/courts/amenities";
+import { SPORT_CATALOG_KEYS } from "@/lib/courts/sports";
 
 /**
  * Sponsorship/amenity fields shared by create and edit forms. `photosText`
@@ -12,6 +13,7 @@ const SponsorshipFields = {
   whatsappUrl: z.string().trim().url({ error: "Ingresa una URL válida." }).optional().or(z.literal("")),
   bookingUrl: z.string().trim().url({ error: "Ingresa una URL válida." }).optional().or(z.literal("")),
   amenities: z.array(z.enum(AMENITY_KEYS)).optional().default([]),
+  sports: z.array(z.enum(SPORT_CATALOG_KEYS)).optional().default([]),
   isOfficial: z.coerce.boolean().optional().default(false),
   sponsoredUntil: z.string().trim().optional(),
   sponsorPriority: z.coerce.number().int().optional().default(0),
@@ -30,6 +32,7 @@ export const AddCourtFormSchema = z.object({
     .number({ error: "Ingresa una longitud válida." })
     .min(-180)
     .max(180),
+  address: z.string().trim().optional(),
   contactPhone: z.string().trim().optional(),
   schedule: z.string().trim().optional(),
   ...SponsorshipFields,
@@ -41,6 +44,7 @@ export type AddCourtFormState =
         name?: string[];
         lat?: string[];
         lng?: string[];
+        address?: string[];
         contactPhone?: string[];
         schedule?: string[];
         logoUrl?: string[];

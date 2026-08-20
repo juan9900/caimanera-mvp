@@ -1,33 +1,10 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
+import { MapContainer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { DarkTiles, buildCourtIcon, CourtPopupContent } from "@/components/map/map-shared";
 
-// Served from /public so the URL is a plain string, independent of how the
-// bundler handles image imports from inside node_modules.
-const courtIcon = L.icon({
-  iconUrl: "/leaflet/marker-icon.png",
-  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
-  shadowUrl: "/leaflet/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const selectedCourtIcon = L.icon({
-  iconUrl: "/leaflet/marker-icon.png",
-  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
-  shadowUrl: "/leaflet/marker-shadow.png",
-  iconSize: [33, 54],
-  iconAnchor: [16, 54],
-  popupAnchor: [1, -44],
-  shadowSize: [54, 54],
-  className: "hue-rotate-90",
-});
-
-export type CourtPickerMarker = { id: string; name: string; lat: number; lng: number };
+export type CourtPickerMarker = { id: string; name: string; lat: number; lng: number; sports?: string[] | null };
 
 export function CourtPickerMapInner({
   courts,
@@ -47,18 +24,17 @@ export function CourtPickerMapInner({
       scrollWheelZoom={false}
       className="h-80 w-full rounded-md"
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <DarkTiles />
       {courts.map((court) => (
         <Marker
           key={court.id}
           position={[court.lat, court.lng]}
-          icon={court.id === selectedId ? selectedCourtIcon : courtIcon}
+          icon={buildCourtIcon(court.sports, { selected: court.id === selectedId })}
           eventHandlers={{ click: () => onSelect(court.id) }}
         >
-          <Popup>{court.name}</Popup>
+          <Popup>
+            <CourtPopupContent name={court.name} sports={court.sports} />
+          </Popup>
         </Marker>
       ))}
     </MapContainer>

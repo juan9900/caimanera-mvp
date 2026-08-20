@@ -56,6 +56,21 @@ export const getCurrentUserProfile = cache(
   },
 );
 
+export type UserLocation = { label: string; lat: number; lng: number };
+
+/**
+ * The current user's app-wide location (set via the header's location
+ * selector, `components/location/location-selector.tsx`), used to center
+ * maps and compute distances. `null` if they haven't set one yet.
+ */
+export const getUserLocation = cache(async (): Promise<UserLocation | null> => {
+  const profile = await getCurrentUserProfile();
+  if (!profile?.location_label || profile.location_lat == null || profile.location_lng == null) {
+    return null;
+  }
+  return { label: profile.location_label, lat: profile.location_lat, lng: profile.location_lng };
+});
+
 export type Court = Tables<"courts">;
 
 /** Fetches all courts visible to the current user, alphabetically. */
@@ -219,7 +234,7 @@ export const getOfficialCourts = cache(async (): Promise<HomeCourt[]> => {
   const { data } = await supabase
     .from("courts")
     .select(
-      "id, name, lat, lng, is_official, photos, logo_url, amenities, promo_text, promo_code, promo_expires_at, sponsored_until, sponsor_priority",
+      "id, name, lat, lng, address, sports, is_official, photos, logo_url, amenities, promo_text, promo_code, promo_expires_at, sponsored_until, sponsor_priority",
     )
     .or(`is_official.eq.true,sponsored_until.gt.${new Date().toISOString()}`)
     .order("name");

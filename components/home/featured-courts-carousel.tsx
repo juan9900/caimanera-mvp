@@ -108,12 +108,10 @@ export function FeaturedCourtsCarousel({
   courts: FeaturedCourt[];
   distanceByCourtId?: Map<string, string>;
 }) {
-  if (courts.length === 0) return null;
-
   return (
     <section className="flex flex-col gap-3 pt-2">
       <h2 className="px-4 font-display text-xl font-bold text-on-surface">Canchas Destacadas</h2>
-      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pl-4 pb-1">
+      <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pl-4 pb-1">
         {courts.map((featured) => (
           <SponsoredCourtCard
             key={featured.court.id}

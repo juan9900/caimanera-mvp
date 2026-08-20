@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { verifySession, getCurrentUserProfile, getCourts, getUserLocation } from "@/lib/auth/dal";
 import { MapExperience } from "@/components/mapa/map-experience";
 
-export default async function CanchasPage() {
+export default async function MapaPage() {
   const session = await verifySession();
   if (!session) redirect("/login");
 

@@ -1,23 +1,10 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
+import { MapContainer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import Link from "next/link";
+import { DarkTiles, buildCourtIcon, CourtPopupContent } from "@/components/map/map-shared";
 
-// Served from /public so the URL is a plain string, independent of how the
-// bundler handles image imports from inside node_modules.
-const courtIcon = L.icon({
-  iconUrl: "/leaflet/marker-icon.png",
-  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
-  shadowUrl: "/leaflet/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-export type CourtMarker = { id: string; name: string; lat: number; lng: number };
+export type CourtMarker = { id: string; name: string; lat: number; lng: number; sports?: string[] | null };
 
 export function CourtsMapInner({ courts }: { courts: CourtMarker[] }) {
   const center: [number, number] = [courts[0].lat, courts[0].lng];
@@ -29,14 +16,11 @@ export function CourtsMapInner({ courts }: { courts: CourtMarker[] }) {
       scrollWheelZoom={false}
       className="h-80 w-full rounded-md"
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <DarkTiles />
       {courts.map((court) => (
-        <Marker key={court.id} position={[court.lat, court.lng]} icon={courtIcon}>
+        <Marker key={court.id} position={[court.lat, court.lng]} icon={buildCourtIcon(court.sports)}>
           <Popup>
-            <Link href={`/canchas/${court.id}`}>{court.name}</Link>
+            <CourtPopupContent name={court.name} sports={court.sports} href={`/canchas/${court.id}`} />
           </Popup>
         </Marker>
       ))}

@@ -56,6 +56,7 @@ export type Database = {
       courts: {
         Row: {
           added_by: string
+          address: string | null
           amenities: string[]
           booking_url: string | null
           closes_at: string | null
@@ -76,10 +77,12 @@ export type Database = {
           schedule: string | null
           sponsor_priority: number
           sponsored_until: string | null
+          sports: string[]
           whatsapp_url: string | null
         }
         Insert: {
           added_by: string
+          address?: string | null
           amenities?: string[]
           booking_url?: string | null
           closes_at?: string | null
@@ -100,10 +103,12 @@ export type Database = {
           schedule?: string | null
           sponsor_priority?: number
           sponsored_until?: string | null
+          sports?: string[]
           whatsapp_url?: string | null
         }
         Update: {
           added_by?: string
+          address?: string | null
           amenities?: string[]
           booking_url?: string | null
           closes_at?: string | null
@@ -124,6 +129,7 @@ export type Database = {
           schedule?: string | null
           sponsor_priority?: number
           sponsored_until?: string | null
+          sports?: string[]
           whatsapp_url?: string | null
         }
         Relationships: [
@@ -333,6 +339,9 @@ export type Database = {
           id: string
           invited_by: string | null
           is_admin: boolean
+          location_label: string | null
+          location_lat: number | null
+          location_lng: number | null
           name: string | null
           notification_scopes: string[]
           phone: string | null
@@ -347,6 +356,9 @@ export type Database = {
           id: string
           invited_by?: string | null
           is_admin?: boolean
+          location_label?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           name?: string | null
           notification_scopes?: string[]
           phone?: string | null
@@ -361,6 +373,9 @@ export type Database = {
           id?: string
           invited_by?: string | null
           is_admin?: boolean
+          location_label?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
           name?: string | null
           notification_scopes?: string[]
           phone?: string | null

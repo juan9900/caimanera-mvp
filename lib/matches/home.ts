@@ -6,10 +6,12 @@
  * one easy-to-change place (see home-ui-spec.md).
  */
 import type { Tables } from "@/lib/supabase/database.types";
+import { haversineKm, type LatLng } from "@/lib/geo/distance";
+import { SPORTS } from "@/lib/courts/sports";
 
-export const SPORT_LABELS: Record<string, string> = {
-  futbol: "Fútbol",
-};
+export const SPORT_LABELS: Record<string, string> = Object.fromEntries(
+  SPORTS.map(({ key, label }) => [key, label]),
+);
 
 export const VIBE_LABELS: Record<string, string> = {
   relajado: "Relajado",
@@ -22,6 +24,8 @@ export type HomeCourt = Pick<
   | "name"
   | "lat"
   | "lng"
+  | "address"
+  | "sports"
   | "is_official"
   | "photos"
   | "logo_url"
@@ -65,6 +69,56 @@ export function selectFeaturedCourts(
     court,
     openMatchCount: countByCourtId.get(court.id) ?? 0,
   }));
+}
+
+/** Default max distance (km) from the user's location for "nearby" content. */
+export const DEFAULT_RADIUS_KM = 15;
+
+/** Steps offered to widen the search when nothing falls within the current radius. */
+export const RADIUS_EXPANSION_STEPS_KM = [15, 30, 50, 100];
+
+function withinRadius(
+  point: { lat: number; lng: number },
+  position: LatLng,
+  radiusKm: number,
+): boolean {
+  return haversineKm(position, point) <= radiusKm;
+}
+
+/** Keeps only the courts within `radiusKm` of `position`. */
+export function filterCourtsByRadius<T extends { lat: number; lng: number }>(
+  courts: T[],
+  position: LatLng,
+  radiusKm: number,
+): T[] {
+  return courts.filter((court) => withinRadius(court, position, radiusKm));
+}
+
+/** Keeps only the matches (with a court) within `radiusKm` of `position`. */
+export function filterMatchesByRadius(
+  matches: HomeMatch[],
+  position: LatLng,
+  radiusKm: number,
+): HomeMatch[] {
+  return matches.filter(
+    (match) => match.court != null && withinRadius(match.court, position, radiusKm),
+  );
+}
+
+/**
+ * Smallest radius from `steps` (ascending) that contains at least one item,
+ * or `null` if none do, even at the widest step. Used to auto-widen content
+ * that has no manual "ampliar rango" control (e.g. the map preview card).
+ */
+export function smallestRadiusWithResults<T extends { lat: number; lng: number }>(
+  items: T[],
+  position: LatLng,
+  steps: number[] = RADIUS_EXPANSION_STEPS_KM,
+): number | null {
+  for (const radiusKm of steps) {
+    if (items.some((item) => withinRadius(item, position, radiusKm))) return radiusKm;
+  }
+  return null;
 }
 
 /** Slots still needed to fill a match. */

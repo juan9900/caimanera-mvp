@@ -1,4 +1,5 @@
 import { AMENITIES } from "@/lib/courts/amenities";
+import { SPORTS } from "@/lib/courts/sports";
 import type { AddCourtFormState } from "@/lib/courts/definitions";
 
 type CourtFormErrors = NonNullable<AddCourtFormState>["errors"];
@@ -25,6 +26,7 @@ export function CourtSponsorshipFields({
     whatsappUrl?: string | null;
     bookingUrl?: string | null;
     amenities?: string[];
+    sports?: string[];
     isOfficial?: boolean;
     sponsoredUntil?: string | null;
     sponsorPriority?: number;
@@ -113,6 +115,24 @@ export function CourtSponsorshipFields({
                 name="amenities"
                 value={key}
                 defaultChecked={defaultValues?.amenities?.includes(key) ?? false}
+                className="rounded border-zinc-300 text-green-600 focus:ring-green-600"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="block text-sm font-medium text-zinc-700">Deportes</legend>
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {SPORTS.map(({ key, label }) => (
+            <label key={key} className="flex items-center gap-2 text-sm text-zinc-700">
+              <input
+                type="checkbox"
+                name="sports"
+                value={key}
+                defaultChecked={defaultValues?.sports?.includes(key) ?? false}
                 className="rounded border-zinc-300 text-green-600 focus:ring-green-600"
               />
               {label}

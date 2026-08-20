@@ -6,6 +6,8 @@ import {
   getFriendsPrivateMatches,
   getMyInvitations,
   getOfficialCourts,
+  getCourts,
+  getUserLocation,
 } from "@/lib/auth/dal";
 import { HomeClient } from "@/components/home/home-client";
 
@@ -16,12 +18,15 @@ export default async function Home() {
   const profile = await getCurrentUserProfile();
   if (!profile?.name) redirect("/onboarding");
 
-  const [matches, friendsMatches, invitations, officialCourts] = await Promise.all([
-    getOpenMatchesWithCourtGeo(),
-    getFriendsPrivateMatches(),
-    getMyInvitations(),
-    getOfficialCourts(),
-  ]);
+  const [matches, friendsMatches, invitations, officialCourts, allCourts, userLocation] =
+    await Promise.all([
+      getOpenMatchesWithCourtGeo(),
+      getFriendsPrivateMatches(),
+      getMyInvitations(),
+      getOfficialCourts(),
+      getCourts(),
+      getUserLocation(),
+    ]);
 
   return (
     <HomeClient
@@ -29,6 +34,8 @@ export default async function Home() {
       friendsMatches={friendsMatches}
       invitations={invitations}
       officialCourts={officialCourts}
+      allCourts={allCourts}
+      userLocation={userLocation}
     />
   );
 }

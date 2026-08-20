@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { createMatch } from "@/app/actions/matches";
 import { CourtPickerMap } from "@/components/court-picker-map";
 import { CourtPicker } from "@/components/courts/court-picker";
+import { SportChip } from "@/components/courts/sport-chip";
 import { VisibilityToggle } from "@/components/matches/visibility-toggle";
 import type { Court } from "@/lib/auth/dal";
 import { BANK_OPTIONS } from "@/lib/matches/definitions";
+import { SPORTS } from "@/lib/courts/sports";
 import { sortCourtsForCreateMatchPicker } from "@/lib/courts/sort";
 
 const INPUT_CLASSNAME =
@@ -16,16 +18,29 @@ const LABEL_CLASSNAME = "block font-label text-xs font-bold uppercase tracking-w
 
 export function CreateMatchForm({ courts }: { courts: Court[] }) {
   const [state, action, pending] = useActionState(createMatch, undefined);
+  const [sport, setSport] = useState("futbol");
   const [courtId, setCourtId] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [totalSlots, setTotalSlots] = useState(10);
   const [paymentAmountBs, setPaymentAmountBs] = useState("");
-  const mappableCourts = courts.filter((c) => c.lat != null && c.lng != null);
-  const sortedCourts = sortCourtsForCreateMatchPicker(courts);
+  const courtsForSport = useMemo(
+    () => courts.filter((c) => c.sports?.includes(sport)),
+    [courts, sport],
+  );
+  const mappableCourts = courtsForSport.filter((c) => c.lat != null && c.lng != null);
+  const sortedCourts = sortCourtsForCreateMatchPicker(courtsForSport);
   const amountPerPerson =
     paymentAmountBs && totalSlots > 0
       ? Number(paymentAmountBs) / totalSlots
       : null;
+
+  /** Switching sport clears the picked court if it doesn't offer the new one. */
+  function handleSportChange(nextSport: string) {
+    setSport(nextSport);
+    setCourtId((current) =>
+      courts.find((c) => c.id === current)?.sports?.includes(nextSport) ? current : "",
+    );
+  }
 
   return (
     <form action={action} className="w-full space-y-5">
@@ -38,32 +53,48 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
       </div>
 
       <div>
-        <span className={LABEL_CLASSNAME}>Cancha</span>
-        {mappableCourts.length > 0 && (
-          <div className="mt-1 mb-3">
-            <CourtPickerMap
-              courts={mappableCourts}
-              selectedId={courtId || null}
-              onSelect={setCourtId}
-            />
-            <p className="mt-1 font-body text-xs text-on-surface-variant">
-              Toca un marcador para elegir la cancha oficial.
-            </p>
-          </div>
-        )}
-        <input type="hidden" name="courtId" value={courtId} />
-        <div className="mt-1">
-          <CourtPicker courts={sortedCourts} selectedId={courtId} onSelect={setCourtId} />
+        <span className={LABEL_CLASSNAME}>Deporte</span>
+        <input type="hidden" name="sport" value={sport} />
+        <div className="mt-1 flex flex-wrap gap-2">
+          {SPORTS.map(({ key }) => (
+            <SportChip key={key} sportKey={key} active={sport === key} onClick={() => handleSportChange(key)} />
+          ))}
         </div>
+        {state?.errors?.sport && (
+          <p className="mt-1 font-body text-sm text-dark-error">{state.errors.sport[0]}</p>
+        )}
+      </div>
+
+      <div>
+        <span className={LABEL_CLASSNAME}>Cancha</span>
+        {courtsForSport.length === 0 ? (
+          <p className="mt-1 rounded-lg border border-dashed border-surface-variant px-3 py-4 text-center font-body text-sm text-on-surface-variant">
+            Todavía no hay canchas cargadas para este deporte.
+          </p>
+        ) : (
+          <>
+            {mappableCourts.length > 0 && (
+              <div className="mt-1 mb-3">
+                <CourtPickerMap
+                  courts={mappableCourts}
+                  selectedId={courtId || null}
+                  onSelect={setCourtId}
+                />
+                <p className="mt-1 font-body text-xs text-on-surface-variant">
+                  Toca un marcador para elegir la cancha oficial.
+                </p>
+              </div>
+            )}
+            <input type="hidden" name="courtId" value={courtId} />
+            <div className="mt-1">
+              <CourtPicker courts={sortedCourts} selectedId={courtId} onSelect={setCourtId} />
+            </div>
+          </>
+        )}
         {state?.errors?.courtId && (
           <p className="mt-1 font-body text-sm text-dark-error">{state.errors.courtId[0]}</p>
         )}
       </div>
-
-      <input type="hidden" name="sport" value="futbol" />
-      {state?.errors?.sport && (
-        <p className="mt-1 font-body text-sm text-dark-error">{state.errors.sport[0]}</p>
-      )}
 
       <div>
         <label htmlFor="datetime" className={LABEL_CLASSNAME}>

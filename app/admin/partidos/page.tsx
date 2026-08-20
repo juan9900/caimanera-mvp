@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { verifySession, getCurrentUserProfile, getIsAdmin, getAllMatches } from "@/lib/auth/dal";
-
-const SPORT_LABELS: Record<string, string> = { futbol: "Fútbol" };
+import { SPORT_LABELS } from "@/lib/matches/home";
 const STATUS_LABELS: Record<string, string> = {
   abierto: "Abierto",
   completo: "Completo",

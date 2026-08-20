@@ -62,6 +62,22 @@ export function EditCourtForm({ court }: { court: Court }) {
       </div>
 
       <div>
+        <label htmlFor="address" className="block text-sm font-medium text-zinc-700">
+          Dirección (opcional)
+        </label>
+        <input
+          id="address"
+          name="address"
+          defaultValue={court.address ?? ""}
+          placeholder="Ej: Av. 15 Las Delicias, Maracaibo"
+          className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
+        />
+        {state?.errors?.address && (
+          <p className="mt-1 text-sm text-red-600">{state.errors.address[0]}</p>
+        )}
+      </div>
+
+      <div>
         <label htmlFor="schedule" className="block text-sm font-medium text-zinc-700">
           Horario (opcional)
         </label>
@@ -92,6 +108,7 @@ export function EditCourtForm({ court }: { court: Court }) {
           whatsappUrl: court.whatsapp_url,
           bookingUrl: court.booking_url,
           amenities: court.amenities,
+          sports: court.sports,
           isOfficial: court.is_official,
           sponsoredUntil: court.sponsored_until,
           sponsorPriority: court.sponsor_priority,

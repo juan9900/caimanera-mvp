@@ -41,6 +41,7 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
             </p>
           </div>
         )}
+        <input type="hidden" name="courtId" value={courtId} />
         <div className="mt-1 grid gap-2">
           {sortedCourts.map((court) => {
             const selected = courtId === court.id;
@@ -56,8 +57,6 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
               >
                 <input
                   type="radio"
-                  name="courtId"
-                  value={court.id}
                   checked={selected}
                   onChange={() => setCourtId(court.id)}
                   className="sr-only"

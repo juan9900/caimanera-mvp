@@ -7,7 +7,7 @@ import {
   unsubscribeFromPush,
 } from "@/lib/push/subscribe-client";
 
-type Status = "unsupported" | "checking" | "denied" | "enabled" | "disabled";
+type Status = "unsupported" | "ios-install" | "checking" | "denied" | "enabled" | "disabled";
 
 /** Lets the current user opt in/out of Web Push notifications for this device. */
 export function EnableNotifications({ onEnabled }: { onEnabled?: () => void } = {}) {
@@ -48,6 +48,17 @@ export function EnableNotifications({ onEnabled }: { onEnabled?: () => void } = 
   }
 
   if (status === "unsupported" || status === "checking") return null;
+
+  if (status === "ios-install") {
+    return (
+      <p className="font-body text-xs text-on-surface-variant">
+        Para recibir notificaciones en iPhone: tocá{" "}
+        <span aria-hidden="true">Compartir ⬆️</span> en Safari y elegí{" "}
+        <strong>&quot;Añadir a pantalla de inicio&quot;</strong>. Después abrí Caimanera
+        desde ese ícono y activá las notificaciones ahí.
+      </p>
+    );
+  }
 
   if (status === "denied") {
     return (

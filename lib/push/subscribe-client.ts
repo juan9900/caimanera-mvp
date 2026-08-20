@@ -18,6 +18,27 @@ export function isPushSupported(): boolean {
   );
 }
 
+/** True when running as an installed PWA (standalone display mode). */
+function isStandalone(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(display-mode: standalone)").matches ||
+      // iOS Safari exposes this non-standard flag on navigator.
+      (navigator as Navigator & { standalone?: boolean }).standalone === true)
+  );
+}
+
+/**
+ * iOS Safari only supports Web Push when the site has been added to the
+ * home screen (installed as a standalone PWA). In a regular Safari tab,
+ * `PushManager` doesn't exist, so `isPushSupported()` is false there.
+ */
+export function needsIosInstall(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  return isIos && !isPushSupported() && !isStandalone();
+}
+
 export type SubscribeResult = "enabled" | "denied" | "unsupported" | "error";
 
 /**
@@ -67,9 +88,9 @@ export async function unsubscribeFromPush(): Promise<void> {
 
 /** Checks whether the current device already has an active push subscription. */
 export async function getPushSubscriptionStatus(): Promise<
-  "unsupported" | "denied" | "enabled" | "disabled"
+  "unsupported" | "ios-install" | "denied" | "enabled" | "disabled"
 > {
-  if (!isPushSupported()) return "unsupported";
+  if (!isPushSupported()) return needsIosInstall() ? "ios-install" : "unsupported";
   if (Notification.permission === "denied") return "denied";
 
   try {

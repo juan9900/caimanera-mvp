@@ -14,7 +14,8 @@ export function isPushSupported(): boolean {
   return (
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
-    "PushManager" in window
+    "PushManager" in window &&
+    typeof Notification !== "undefined"
   );
 }
 
@@ -39,17 +40,27 @@ export function needsIosInstall(): boolean {
   return isIos && !isPushSupported() && !isStandalone();
 }
 
-export type SubscribeResult = "enabled" | "denied" | "unsupported" | "error";
+export type SubscribeResult =
+  | "enabled"
+  | "denied"
+  /** The deployment is missing `NEXT_PUBLIC_VAPID_PUBLIC_KEY`. */
+  | "misconfigured"
+  | "unsupported"
+  | "error";
 
 /**
  * Requests notification permission (if needed) and subscribes the current
  * device to Web Push, persisting the subscription server-side.
+ *
+ * Must be called synchronously from a user gesture (a click handler): iOS
+ * only shows the native permission prompt while the page still holds user
+ * activation, and awaiting anything first throws that away. For the same
+ * reason `Notification.requestPermission()` is the very first thing we do —
+ * a missing VAPID key is reported *after* the prompt, so a misconfigured
+ * deployment can still be told apart from a denied permission.
  */
 export async function subscribeToPush(): Promise<SubscribeResult> {
   if (!isPushSupported()) return "unsupported";
-
-  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  if (!vapidPublicKey) return "error";
 
   try {
     const permission = await Notification.requestPermission();
@@ -57,15 +68,26 @@ export async function subscribeToPush(): Promise<SubscribeResult> {
       return permission === "denied" ? "denied" : "error";
     }
 
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidPublicKey) return "misconfigured";
+
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
     });
 
-    await savePushSubscription(subscription.toJSON());
+    const result = await savePushSubscription(subscription.toJSON());
+    if (result.message) {
+      // The browser now holds a subscription the server doesn't know about;
+      // drop it so a retry starts clean instead of looking already-enabled.
+      await subscription.unsubscribe();
+      return "error";
+    }
+
     return "enabled";
-  } catch {
+  } catch (error) {
+    console.warn("[push] no se pudo suscribir", error);
     return "error";
   }
 }
@@ -81,8 +103,9 @@ export async function unsubscribeFromPush(): Promise<void> {
       await deletePushSubscription(subscription.endpoint);
       await subscription.unsubscribe();
     }
-  } catch {
+  } catch (error) {
     // Best-effort.
+    console.warn("[push] no se pudo desuscribir", error);
   }
 }
 

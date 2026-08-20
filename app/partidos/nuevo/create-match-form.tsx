@@ -21,6 +21,7 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
   const [sport, setSport] = useState("futbol");
   const [courtId, setCourtId] = useState("");
   const [isPublic, setIsPublic] = useState(true);
+  const [notifyAudience, setNotifyAudience] = useState(false);
   const [totalSlots, setTotalSlots] = useState(10);
   const [paymentAmountBs, setPaymentAmountBs] = useState("");
   const courtsForSport = useMemo(
@@ -50,6 +51,31 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
         <div className="mt-1">
           <VisibilityToggle value={isPublic} onChange={setIsPublic} />
         </div>
+        {isPublic && (
+          <>
+            <input
+              type="hidden"
+              name="notifyAudience"
+              value={notifyAudience ? "true" : "false"}
+            />
+            <label className="mt-3 flex items-start gap-3 font-body text-sm text-on-surface">
+              <input
+                type="checkbox"
+                checked={notifyAudience}
+                onChange={(e) => setNotifyAudience(e.target.checked)}
+                className="mt-0.5 accent-primary-lime"
+              />
+              <span>
+                Avisar que faltan jugadores
+                <span className="mt-0.5 block font-body text-xs text-on-surface-variant">
+                  Manda una notificación a quienes eligieron recibir avisos de
+                  partidos como este. Si no la marcas, el partido se publica en
+                  silencio.
+                </span>
+              </span>
+            </label>
+          </>
+        )}
       </div>
 
       <div>

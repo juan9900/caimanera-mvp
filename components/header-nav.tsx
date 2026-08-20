@@ -49,6 +49,7 @@ export function HeaderNav({
     { href: "/partidos", label: "Partidos", count: 0 },
     { href: "/canchas", label: "Canchas", count: 0 },
     { href: "/red", label: "Mi red", count: friendRequestCount },
+    { href: "/invitaciones", label: "Invitaciones", count: invitationCount },
     { href: "/perfil", label: "Perfil", count: 0 },
   ];
 

@@ -37,10 +37,10 @@ En resumen, por feature hay tres capas paralelas: `lib/<dominio>/definitions.ts`
 app/
   actions/          Server Actions ("use server") — toda escritura a la DB pasa por aquí
     auth.ts         login, signup, logout
-    matches.ts      crear partido, unirse (públicos), invitar/responder invitación (públicos y privados), aprobar/rechazar, cambiar visibilidad
+    matches.ts      crear partido (con difusión opt-in), unirse (públicos), invitar/responder invitación (públicos y privados), aprobar/rechazar, cambiar visibilidad
     courts.ts       agregar/editar cancha
     profile.ts      onboarding / editar perfil
-    push.ts         guardar/borrar suscripción push
+    push.ts         guardar/borrar suscripción push, notificación de prueba, diagnóstico
     friends.ts      enviar/aceptar/rechazar/cancelar solicitud de amistad, eliminar amigo, buscar usuarios
     location.ts     buscar lugar (geocoding) y guardar la ubicación del usuario
   (rutas)/          una carpeta por ruta, `page.tsx` server + a veces un `*-form.tsx` cliente al lado (incluye `invitaciones/`, la página de invitaciones a partidos, `mapa/` el mapa full-screen de canchas; `canchas/` renderiza la misma `MapExperience` que `/mapa`)
@@ -53,10 +53,12 @@ lib/
     definitions.ts  tipos/esquemas de auth
   matches/, courts/, push/, friends/
     definitions.ts  esquemas Zod + tipos de formulario por dominio
-    home.ts, sort.ts, amenities.ts, sports.tsx   lógica de negocio pura (ordenar, filtrar, catálogo de deportes) — testeada en tests/unit. `sports.tsx` es el catálogo canónico de deportes (`SPORTS`/`getSport`/`SPORT_CATALOG_KEYS`): cada deporte tiene un `icon` (`IconSource` de `lib/icons/svg-icon.ts`) que se renderiza tanto como componente React (`SportIcon`) como string SVG para los pines del mapa (`renderIconSource`), así el chip y el pin son el mismo dibujo. `IconSource` es `{kind:"stroke", nodes, strokeWidth?}` (glifo 24x24 a mano estilo lucide — solo futsal, sin equivalente real) o `{kind:"fill", viewBox, markup}` (silueta rellena tomada de un asset SVG externo, con el `fill` hardcodeado quitado para que `currentColor` se herede — fútbol, básquet, vóleibol, y el mismo glifo de pelota de tenis compartido por tenis/pádel).
+    home.ts, sort.ts, amenities.ts, sports.tsx   lógica de negocio pura (ordenar, filtrar, catálogo de deportes) — testeada en tests/unit. `sports.tsx` es el catálogo canónico de deportes (`SPORTS`/`getSport`/`SPORT_CATALOG_KEYS`): cada deporte tiene un `icon` (`IconSource` de `lib/icons/svg-icon.ts`) que se renderiza tanto como componente React (`SportIcon`) como string SVG para los pines del mapa (`renderIconSource`), así el chip y el pin son el mismo dibujo. `IconSource` es `{kind:"stroke", nodes, strokeWidth?}` (glifo 24x24 a mano estilo lucide — futsal, tenis de mesa y racquetball, sin equivalente real) o `{kind:"fill", viewBox, markup}` (silueta rellena tomada de un asset SVG externo, con el `fill` hardcodeado quitado para que `currentColor` se herede — fútbol, básquet, vóleibol, y el mismo glifo de pelota de tenis compartido por tenis/pádel/tenis de playa).
+    push/send.ts, push/match-notifications.ts   envío Web Push (server-only) + copy/destinatarios por evento
   supabase/
     server.ts       cliente Supabase para Server Components/Actions (cookies de next/headers)
     client.ts        cliente Supabase para Client Components (browser)
+    admin.ts        cliente service-role (saltea RLS) — SOLO para el envío de push
     proxy.ts         refresca el token de sesión (llamado desde el middleware/proxy de Next)
     database.types.ts  tipos generados desde el esquema real de Supabase (no editar a mano)
   geo/
@@ -103,13 +105,55 @@ Regla de negocio clave que se repite en el código: **nunca hay pagos dentro de 
 
 ## Notificaciones push
 
-- El usuario activa notificaciones desde `components/enable-notifications.tsx`, que registra el `sw.js` y guarda la suscripción vía la action `savePushSubscription`.
-- El envío real ocurre desde Server Actions (ej. al crear partido o pedir "faltan jugadores" en `app/actions/matches.ts`) usando `webpush` contra las suscripciones guardadas.
-- `public/sw.js` es el service worker que recibe el push y muestra la notificación / maneja el click.
+**Suscripción (cliente).** El usuario activa el toggle en `components/enable-notifications.tsx`
+→ `subscribeToPush()` (`lib/push/subscribe-client.ts`) → la action `savePushSubscription`.
+`Notification.requestPermission()` es lo **primero** que corre y tiene que
+llamarse desde un gesto del usuario: iOS solo muestra el prompt nativo mientras
+la página conserva user activation, y cualquier `await` previo lo pierde. Por eso
+el onboarding ya no pide el permiso dentro de su form action — solo guarda los
+scopes y remite a Ajustes.
+
+**Envío (servidor).** `lib/push/send.ts` (`server-only`) envuelve `web-push`:
+- `notifyUsers(userIds, payload)` — destinatarios concretos.
+- `notifyMatchAudience(supabase, matchId, payload)` — difusión "faltan jugadores",
+  uniendo los scopes de `AUDIENCE_SCOPES` vía la función SQL
+  `resolve_audience_subscriptions` y deduplicando por endpoint.
+- Todo es best-effort: nunca lanza (una notificación caída no puede tumbar la
+  action que ya escribió), y ante 404/410 borra la suscripción muerta.
+
+Los textos y la búsqueda de destinatarios viven en `lib/push/match-notifications.ts`,
+para que `app/actions/matches.ts` siga tratando de la escritura. Disparadores:
+`inviteToMatch`, `joinMatch` (avisa al organizador), `respondToRequest` (solo al
+aprobar), `cancelMatch` y `reopenMatch` (participantes confirmados). Crear un
+partido **no** avisa por sí solo: la difusión a la audiencia es opt-in, con la
+casilla `notifyAudience` del formulario de creación, y solo para públicos.
+`sendTestNotification` y `getPushDiagnostics` en `app/actions/push.ts` permiten
+verificar la cadena completa desde el propio teléfono (Ajustes → notificaciones).
+
+**RLS.** `push_subscriptions` normalmente está limitada a su dueño, así que
+notificar a otros usuarios prefiere el cliente service-role de
+`lib/supabase/admin.ts` — es el único lugar que lo usa. La alternativa (una
+función `SECURITY DEFINER` genérica) tendría que ser ejecutable por
+`authenticated`, lo que le daría a cualquier usuario logueado las claves push del
+resto. Si `SUPABASE_SERVICE_ROLE_KEY` no está configurada,
+`getSubscriptionsForUsers` cae a leer con el cliente de la sesión: funciona si la
+política de SELECT resulta permisiva, y si no, `getPushDiagnostics` lo reporta en
+la UI en vez de fallar en silencio.
+
+**Variables de entorno:** `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (se inlinea en build →
+cambiarla exige redeploy), `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y
+`SUPABASE_SERVICE_ROLE_KEY`. Si falta la pública, el toggle muestra
+"no están configuradas en este servidor" en vez de fallar en silencio. Ver `.env.example`.
+
+**iOS:** solo funciona con la PWA agregada a la pantalla de inicio (standalone);
+en una pestaña de Safari `PushManager` no existe (`needsIosInstall()`).
+
+`public/sw.js` es el service worker que recibe el push (`{ title, body, url }`),
+muestra la notificación y maneja el click.
 
 ## Testing
 
-- `tests/unit/` — Jest, sobre todo lógica pura de `lib/` (orden de canchas, home, definitions/Zod, dal).
+- `tests/unit/` — Jest, sobre todo lógica pura de `lib/` (orden de canchas, home, definitions/Zod, dal, envío de push).
 - `tests/e2e/` — Playwright, flujo de home end-to-end.
 
 ## Notas para trabajar con Claude Code en este repo

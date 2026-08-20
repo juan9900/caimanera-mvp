@@ -2,12 +2,20 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/auth/dal";
+import { getCurrentUserProfile, requireSession } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import {
   CreateMatchFormSchema,
   type CreateMatchFormState,
 } from "@/lib/matches/definitions";
+import {
+  notifyInvited,
+  notifyJoinRequest,
+  notifyMatchCancelled,
+  notifyMatchReopened,
+  notifyNewPublicMatch,
+  notifyRequestApproved,
+} from "@/lib/push/match-notifications";
 
 export async function createMatch(
   _state: CreateMatchFormState,
@@ -21,6 +29,7 @@ export async function createMatch(
     datetime: formData.get("datetime"),
     vibe: formData.get("vibe"),
     isPublic: formData.get("isPublic") === "true",
+    notifyAudience: formData.get("notifyAudience") === "true",
     totalSlots: formData.get("totalSlots"),
     paymentBank: formData.get("paymentBank"),
     paymentPhone: formData.get("paymentPhone"),
@@ -38,6 +47,7 @@ export async function createMatch(
     datetime,
     vibe,
     isPublic,
+    notifyAudience,
     totalSlots,
     paymentBank,
     paymentPhone,
@@ -80,6 +90,20 @@ export async function createMatch(
   // match creation on it.
   await supabase.rpc("log_court_event", { p_court_id: courtId, p_type: "match_created" });
 
+  // "Faltan jugadores": tell the audience a new match needs people. Opt-in —
+  // creating a match is not on its own a reason to interrupt everyone's phone,
+  // so the organizer has to ask for it. Public only: private matches have no
+  // audience channel by design. Must run before the redirect below, which
+  // throws to unwind the action.
+  if (isPublic && notifyAudience) {
+    await notifyNewPublicMatch(supabase, {
+      id: data.id,
+      courtId,
+      sport,
+      totalSlots,
+    });
+  }
+
   redirect(`/partidos/${data.id}`);
 }
 
@@ -121,6 +145,9 @@ export async function joinMatch(formData: FormData): Promise<MatchActionResult> 
   });
 
   if (error) return { message: "No se pudo unir al partido. Intenta de nuevo." };
+
+  const profile = await getCurrentUserProfile();
+  await notifyJoinRequest(supabase, matchId, match.organizer_id, profile?.name ?? null);
 
   revalidatePath(`/partidos/${matchId}`);
 }
@@ -198,6 +225,9 @@ export async function inviteToMatch(formData: FormData): Promise<MatchActionResu
   const { error } = await supabase.from("match_participants").insert(rows);
 
   if (error) return { message: "No se pudo invitar a los jugadores. Intenta de nuevo." };
+
+  const profile = await getCurrentUserProfile();
+  await notifyInvited(supabase, matchId, toInvite, profile?.name ?? null);
 
   revalidatePath(`/partidos/${matchId}`);
 }
@@ -287,12 +317,19 @@ export async function respondToRequest(formData: FormData): Promise<MatchActionR
   if (typeof participantId !== "string" || typeof matchId !== "string") return;
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: participant, error } = await supabase
     .from("match_participants")
     .update({ status: approve ? "confirmado" : "rechazado" })
-    .eq("id", participantId);
+    .eq("id", participantId)
+    .select("user_id")
+    .maybeSingle();
 
   if (error) return { message: "No se pudo procesar la solicitud. Intenta de nuevo." };
+
+  // Only the good news is worth a push; a rejection is visible in the app.
+  if (approve && participant) {
+    await notifyRequestApproved(supabase, matchId, participant.user_id);
+  }
 
   revalidatePath(`/partidos/${matchId}`);
 }
@@ -327,6 +364,8 @@ export async function cancelMatch(formData: FormData): Promise<MatchActionResult
 
   if (error) return { message: "No se pudo cancelar el partido. Intenta de nuevo." };
 
+  await notifyMatchCancelled(supabase, matchId, session.userId);
+
   revalidatePath(`/partidos/${matchId}`);
 }
 
@@ -351,6 +390,8 @@ export async function reopenMatch(formData: FormData): Promise<MatchActionResult
     .eq("status", "vencido");
 
   if (error) return { message: "No se pudo reabrir el partido. Intenta de nuevo." };
+
+  await notifyMatchReopened(supabase, matchId, session.userId);
 
   revalidatePath("/");
   revalidatePath("/partidos");

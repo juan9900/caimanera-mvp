@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import { PushSubscriptionSchema } from "@/lib/push/definitions";
 import { sendPushToSubscriptions } from "@/lib/push/send";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Saves (or refreshes) the current user's Web Push subscription. */
 export async function savePushSubscription(
@@ -77,4 +78,44 @@ export async function sendTestNotification(): Promise<{ message: string }> {
   });
 
   return { message: "Notificación enviada. Debería llegarte en unos segundos." };
+}
+
+export type PushDiagnostics = {
+  vapidConfigured: boolean;
+  serviceRoleConfigured: boolean;
+  ownSubscriptions: number;
+  /** Whether subscriptions of *other* users are readable with this session. */
+  canReachOtherUsers: boolean;
+};
+
+/**
+ * Reports why push delivery is (or isn't) working, from the device asking.
+ *
+ * The failure modes live in server env vars and RLS policies, neither of which
+ * is visible from a phone — which is exactly where the app gets tested. Returns
+ * booleans about configuration and a count of the caller's own rows; never a
+ * key, an endpoint, or anything about another user.
+ */
+export async function getPushDiagnostics(): Promise<PushDiagnostics> {
+  const session = await requireSession();
+  const supabase = await createClient();
+
+  const { count: ownCount } = await supabase
+    .from("push_subscriptions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", session.userId);
+
+  const { count: otherCount } = await supabase
+    .from("push_subscriptions")
+    .select("id", { count: "exact", head: true })
+    .neq("user_id", session.userId);
+
+  return {
+    vapidConfigured: Boolean(
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY
+    ),
+    serviceRoleConfigured: createAdminClient() !== null,
+    ownSubscriptions: ownCount ?? 0,
+    canReachOtherUsers: (otherCount ?? 0) > 0,
+  };
 }

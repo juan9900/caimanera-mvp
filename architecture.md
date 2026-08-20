@@ -37,10 +37,10 @@ En resumen, por feature hay tres capas paralelas: `lib/<dominio>/definitions.ts`
 app/
   actions/          Server Actions ("use server") — toda escritura a la DB pasa por aquí
     auth.ts         login, signup, logout
-    matches.ts      crear partido, unirse (públicos), invitar/responder invitación (públicos y privados), aprobar/rechazar, cambiar visibilidad
+    matches.ts      crear partido (con difusión opt-in), unirse (públicos), invitar/responder invitación (públicos y privados), aprobar/rechazar, cambiar visibilidad
     courts.ts       agregar/editar cancha
     profile.ts      onboarding / editar perfil
-    push.ts         guardar/borrar suscripción push, enviar notificación de prueba
+    push.ts         guardar/borrar suscripción push, notificación de prueba, diagnóstico
     friends.ts      enviar/aceptar/rechazar/cancelar solicitud de amistad, eliminar amigo, buscar usuarios
   (rutas)/          una carpeta por ruta, `page.tsx` server + a veces un `*-form.tsx` cliente al lado (incluye `invitaciones/`, la página de invitaciones a partidos)
   admin/            panel simple (solo `is_admin`), sin nav propia — ve usuarios, partidos, canchas, métricas
@@ -116,16 +116,22 @@ scopes y remite a Ajustes.
 
 Los textos y la búsqueda de destinatarios viven en `lib/push/match-notifications.ts`,
 para que `app/actions/matches.ts` siga tratando de la escritura. Disparadores:
-`createMatch` (solo públicos → audiencia), `inviteToMatch`, `joinMatch` (avisa al
-organizador), `respondToRequest` (solo al aprobar), `cancelMatch` y `reopenMatch`
-(participantes confirmados). `sendTestNotification` en `app/actions/push.ts`
-manda una notificación al propio usuario para verificar la cadena completa.
+`inviteToMatch`, `joinMatch` (avisa al organizador), `respondToRequest` (solo al
+aprobar), `cancelMatch` y `reopenMatch` (participantes confirmados). Crear un
+partido **no** avisa por sí solo: la difusión a la audiencia es opt-in, con la
+casilla `notifyAudience` del formulario de creación, y solo para públicos.
+`sendTestNotification` y `getPushDiagnostics` en `app/actions/push.ts` permiten
+verificar la cadena completa desde el propio teléfono (Ajustes → notificaciones).
 
-**RLS.** `push_subscriptions` está limitada a su dueño, así que notificar a otros
-usuarios usa el cliente service-role de `lib/supabase/admin.ts` — es el único
-lugar que lo usa. La alternativa (una función `SECURITY DEFINER` genérica) tendría
-que ser ejecutable por `authenticated`, lo que le daría a cualquier usuario logueado
-las claves push del resto.
+**RLS.** `push_subscriptions` normalmente está limitada a su dueño, así que
+notificar a otros usuarios prefiere el cliente service-role de
+`lib/supabase/admin.ts` — es el único lugar que lo usa. La alternativa (una
+función `SECURITY DEFINER` genérica) tendría que ser ejecutable por
+`authenticated`, lo que le daría a cualquier usuario logueado las claves push del
+resto. Si `SUPABASE_SERVICE_ROLE_KEY` no está configurada,
+`getSubscriptionsForUsers` cae a leer con el cliente de la sesión: funciona si la
+política de SELECT resulta permisiva, y si no, `getPushDiagnostics` lo reporta en
+la UI en vez de fallar en silencio.
 
 **Variables de entorno:** `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (se inlinea en build →
 cambiarla exige redeploy), `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y

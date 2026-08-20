@@ -97,23 +97,30 @@ export async function sendPushToSubscriptions(
 }
 
 /**
- * Subscriptions belonging to the given users. Needs the service-role client:
- * RLS scopes `push_subscriptions` to its owner, and notifying someone means
- * reading a row that isn't ours.
+ * Subscriptions belonging to the given users.
+ *
+ * Prefers the service-role client, because notifying someone means reading a
+ * `push_subscriptions` row that isn't ours and RLS normally scopes that table
+ * to its owner. Falls back to the caller's own client when the service-role
+ * key isn't configured: if the table's SELECT policy turns out to be permissive
+ * this still delivers, and if it isn't we're no worse off than returning empty.
  */
 export async function getSubscriptionsForUsers(
+  supabase: Client,
   userIds: string[]
 ): Promise<StoredSubscription[]> {
   const ids = Array.from(new Set(userIds.filter(Boolean)));
   if (ids.length === 0) return [];
 
   const admin = createAdminClient();
+
   if (!admin) {
-    console.warn("[push] falta SUPABASE_SERVICE_ROLE_KEY; no se puede notificar a otros usuarios");
-    return [];
+    console.warn(
+      "[push] falta SUPABASE_SERVICE_ROLE_KEY; intentando leer las suscripciones con la sesión del usuario (la RLS puede devolver vacío)"
+    );
   }
 
-  const { data, error } = await admin
+  const { data, error } = await (admin ?? supabase)
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
     .in("user_id", ids);
@@ -123,15 +130,23 @@ export async function getSubscriptionsForUsers(
     return [];
   }
 
+  if ((data ?? []).length === 0) {
+    console.warn(
+      `[push] ningún dispositivo para ${ids.length} usuario(s); ` +
+        (admin ? "no tienen suscripciones" : "puede ser la RLS bloqueando la lectura")
+    );
+  }
+
   return data ?? [];
 }
 
 /** Sends one notification to every device of the given users. */
 export async function notifyUsers(
+  supabase: Client,
   userIds: string[],
   payload: PushPayload
 ): Promise<void> {
-  await sendPushToSubscriptions(await getSubscriptionsForUsers(userIds), payload);
+  await sendPushToSubscriptions(await getSubscriptionsForUsers(supabase, userIds), payload);
 }
 
 /**

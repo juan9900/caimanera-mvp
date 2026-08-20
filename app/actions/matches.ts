@@ -29,6 +29,7 @@ export async function createMatch(
     datetime: formData.get("datetime"),
     vibe: formData.get("vibe"),
     isPublic: formData.get("isPublic") === "true",
+    notifyAudience: formData.get("notifyAudience") === "true",
     totalSlots: formData.get("totalSlots"),
     paymentBank: formData.get("paymentBank"),
     paymentPhone: formData.get("paymentPhone"),
@@ -46,6 +47,7 @@ export async function createMatch(
     datetime,
     vibe,
     isPublic,
+    notifyAudience,
     totalSlots,
     paymentBank,
     paymentPhone,
@@ -88,10 +90,12 @@ export async function createMatch(
   // match creation on it.
   await supabase.rpc("log_court_event", { p_court_id: courtId, p_type: "match_created" });
 
-  // "Faltan jugadores": tell the audience a new match needs people. Public
-  // only — private matches have no audience channel by design. Must run
-  // before the redirect below, which throws to unwind the action.
-  if (isPublic) {
+  // "Faltan jugadores": tell the audience a new match needs people. Opt-in —
+  // creating a match is not on its own a reason to interrupt everyone's phone,
+  // so the organizer has to ask for it. Public only: private matches have no
+  // audience channel by design. Must run before the redirect below, which
+  // throws to unwind the action.
+  if (isPublic && notifyAudience) {
     await notifyNewPublicMatch(supabase, {
       id: data.id,
       courtId,
@@ -143,7 +147,7 @@ export async function joinMatch(formData: FormData): Promise<MatchActionResult> 
   if (error) return { message: "No se pudo unir al partido. Intenta de nuevo." };
 
   const profile = await getCurrentUserProfile();
-  await notifyJoinRequest(matchId, match.organizer_id, profile?.name ?? null);
+  await notifyJoinRequest(supabase, matchId, match.organizer_id, profile?.name ?? null);
 
   revalidatePath(`/partidos/${matchId}`);
 }
@@ -223,7 +227,7 @@ export async function inviteToMatch(formData: FormData): Promise<MatchActionResu
   if (error) return { message: "No se pudo invitar a los jugadores. Intenta de nuevo." };
 
   const profile = await getCurrentUserProfile();
-  await notifyInvited(matchId, toInvite, profile?.name ?? null);
+  await notifyInvited(supabase, matchId, toInvite, profile?.name ?? null);
 
   revalidatePath(`/partidos/${matchId}`);
 }
@@ -324,7 +328,7 @@ export async function respondToRequest(formData: FormData): Promise<MatchActionR
 
   // Only the good news is worth a push; a rejection is visible in the app.
   if (approve && participant) {
-    await notifyRequestApproved(matchId, participant.user_id);
+    await notifyRequestApproved(supabase, matchId, participant.user_id);
   }
 
   revalidatePath(`/partidos/${matchId}`);

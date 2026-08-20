@@ -32,6 +32,9 @@ export const CreateMatchFormSchema = z
       error: "Selecciona una vibra.",
     }),
     isPublic: z.coerce.boolean().optional().default(true),
+    // Opt-in: crear un partido no avisa a nadie salvo que el organizador lo
+    // pida explícitamente. Solo aplica a partidos públicos.
+    notifyAudience: z.coerce.boolean().optional().default(false),
     totalSlots: z.coerce
       .number({ error: "Ingresa la cantidad de cupos." })
       .int()

@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import { sendPushToSubscriptions } from "@/lib/push/send";
+import { getSubscriptionsForUsers, sendPushToSubscriptions } from "@/lib/push/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 jest.mock("web-push", () => ({
@@ -95,5 +95,54 @@ describe("sendPushToSubscriptions", () => {
     await sendPushToSubscriptions([], PAYLOAD);
 
     expect(sendNotification).not.toHaveBeenCalled();
+  });
+});
+
+describe("getSubscriptionsForUsers", () => {
+  /** A client whose `.select().in()` resolves to the given rows. */
+  function stubReader(rows: unknown[]) {
+    const inFilter = jest.fn().mockResolvedValue({ data: rows, error: null });
+    const select = jest.fn(() => ({ in: inFilter }));
+    return { client: { from: jest.fn(() => ({ select })) }, inFilter };
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  it("reads through the service-role client when it is configured", async () => {
+    const admin = stubReader([SUB_A]);
+    const session = stubReader([]);
+    mockedCreateAdminClient.mockReturnValue(admin.client);
+
+    const result = await getSubscriptionsForUsers(session.client as never, ["u1"]);
+
+    expect(result).toEqual([SUB_A]);
+    expect(admin.inFilter).toHaveBeenCalledWith("user_id", ["u1"]);
+    expect(session.client.from).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the caller's own client when the service-role key is missing", async () => {
+    const session = stubReader([SUB_B]);
+    mockedCreateAdminClient.mockReturnValue(null);
+
+    const result = await getSubscriptionsForUsers(session.client as never, ["u1"]);
+
+    expect(result).toEqual([SUB_B]);
+    expect(session.inFilter).toHaveBeenCalledWith("user_id", ["u1"]);
+  });
+
+  it("dedupes user ids and skips the query when there are none", async () => {
+    const session = stubReader([]);
+    mockedCreateAdminClient.mockReturnValue(null);
+
+    await getSubscriptionsForUsers(session.client as never, ["u1", "u1", ""]);
+    expect(session.inFilter).toHaveBeenCalledWith("user_id", ["u1"]);
+
+    jest.clearAllMocks();
+    const empty = stubReader([]);
+    await getSubscriptionsForUsers(empty.client as never, []);
+    expect(empty.client.from).not.toHaveBeenCalled();
   });
 });

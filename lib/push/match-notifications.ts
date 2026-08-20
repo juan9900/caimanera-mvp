@@ -70,11 +70,12 @@ export async function notifyNewPublicMatch(
 
 /** Someone asked to join — only the organizer can approve, so only they hear about it. */
 export async function notifyJoinRequest(
+  supabase: Client,
   matchId: string,
   organizerId: string,
   requesterName: string | null
 ): Promise<void> {
-  await notifyUsers([organizerId], {
+  await notifyUsers(supabase, [organizerId], {
     title: "Alguien quiere unirse a tu partido",
     body: `${requesterName ?? "Un jugador"} pidió unirse. Entrá para aceptarlo o rechazarlo.`,
     url: matchUrl(matchId),
@@ -83,10 +84,11 @@ export async function notifyJoinRequest(
 
 /** The organizer approved a pending join request. */
 export async function notifyRequestApproved(
+  supabase: Client,
   matchId: string,
   userId: string
 ): Promise<void> {
-  await notifyUsers([userId], {
+  await notifyUsers(supabase, [userId], {
     title: "¡Estás dentro!",
     body: "El organizador aceptó tu solicitud. Nos vemos en la cancha.",
     url: matchUrl(matchId),
@@ -95,11 +97,12 @@ export async function notifyRequestApproved(
 
 /** The organizer invited specific players. */
 export async function notifyInvited(
+  supabase: Client,
   matchId: string,
   userIds: string[],
   organizerName: string | null
 ): Promise<void> {
-  await notifyUsers(userIds, {
+  await notifyUsers(supabase, userIds, {
     title: "Te invitaron a una caimanera",
     body: `${organizerName ?? "Un organizador"} te invitó a jugar. Entrá para aceptar.`,
     url: matchUrl(matchId),
@@ -114,7 +117,7 @@ export async function notifyMatchCancelled(
 ): Promise<void> {
   const userIds = await getConfirmedUserIds(supabase, matchId, organizerId);
 
-  await notifyUsers(userIds, {
+  await notifyUsers(supabase, userIds, {
     title: "Se canceló un partido",
     body: "El organizador canceló la caimanera en la que estabas confirmado.",
     url: matchUrl(matchId),
@@ -129,7 +132,7 @@ export async function notifyMatchReopened(
 ): Promise<void> {
   const userIds = await getConfirmedUserIds(supabase, matchId, organizerId);
 
-  await notifyUsers(userIds, {
+  await notifyUsers(supabase, userIds, {
     title: "Se reabrió un partido",
     body: "El organizador reabrió la caimanera para buscar más jugadores.",
     url: matchUrl(matchId),

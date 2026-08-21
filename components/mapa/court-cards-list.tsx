@@ -5,6 +5,7 @@ import { Clock, MapPin } from "lucide-react";
 import { getSport, SportIcon } from "@/lib/courts/sports";
 import { formatTodayHours } from "@/lib/courts/hours";
 import { AmenityIcons } from "@/components/courts/amenity-icons";
+import { RatingStars } from "@/components/courts/rating-stars";
 import type { Court } from "@/lib/auth/dal";
 
 /** Vertically stacked list of court cards under the `/mapa` map — mirrors selection with the pin the user tapped. */
@@ -57,10 +58,15 @@ export function CourtCardsList({
               court.id === selectedId ? "border-primary-lime" : "border-surface-variant/50"
             }`}
           >
-            <div
-              className="h-20 w-20 shrink-0 rounded-lg bg-surface-variant bg-cover bg-center"
-              style={image ? { backgroundImage: `url(${image})` } : undefined}
-            />
+            {court.is_official && (
+              <div className="flex shrink-0 flex-col items-center gap-1">
+                <div
+                  className="h-20 w-20 rounded-lg bg-surface-variant bg-cover bg-center"
+                  style={image ? { backgroundImage: `url(${image})` } : undefined}
+                />
+                <RatingStars avg={court.rating_avg} count={court.rating_count} />
+              </div>
+            )}
 
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex items-center justify-between gap-2">
@@ -98,6 +104,10 @@ export function CourtCardsList({
                   </div>
                 )}
               </div>
+
+              {!court.is_official && (
+                <RatingStars avg={court.rating_avg} count={court.rating_count} />
+              )}
 
               {court.is_official && (
                 <>

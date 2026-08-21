@@ -30,7 +30,7 @@ export async function createMatch(
     sport: formData.get("sport"),
     datetime: formData.get("datetime"),
     vibe: formData.get("vibe"),
-    isPublic: formData.get("isPublic") === "true",
+    visibility: formData.get("visibility") ?? undefined,
     notifyAudience: formData.get("notifyAudience") === "true",
     totalSlots: formData.get("totalSlots"),
     paymentBank: formData.get("paymentBank"),
@@ -48,7 +48,7 @@ export async function createMatch(
     sport,
     datetime,
     vibe,
-    isPublic,
+    visibility,
     notifyAudience,
     totalSlots,
     paymentBank,
@@ -65,7 +65,7 @@ export async function createMatch(
       sport,
       datetime: datetime.toISOString(),
       vibe,
-      is_public: isPublic,
+      visibility,
       total_slots: totalSlots,
       organizer_id: session.userId,
       payment_bank: paymentBank ?? null,
@@ -94,10 +94,10 @@ export async function createMatch(
 
   // "Faltan jugadores": tell the audience a new match needs people. Opt-in —
   // creating a match is not on its own a reason to interrupt everyone's phone,
-  // so the organizer has to ask for it. Public only: private matches have no
-  // audience channel by design. Must run before the redirect below, which
-  // throws to unwind the action.
-  if (isPublic && notifyAudience) {
+  // so the organizer has to ask for it. Public only: "amigos"/"privada"
+  // matches have no audience channel by design. Must run before the redirect
+  // below, which throws to unwind the action.
+  if (visibility === "publica" && notifyAudience) {
     await notifyNewPublicMatch(supabase, {
       id: data.id,
       courtId,
@@ -447,23 +447,34 @@ export async function reopenMatch(formData: FormData): Promise<MatchActionResult
   revalidatePath(`/partidos/${matchId}`);
 }
 
+const MATCH_VISIBILITY_VALUES = ["publica", "amigos", "privada"] as const;
+
 /**
- * Organizer toggles a match's visibility. Private matches are dropped from
- * the home/`/partidos` listings (see `getOpenMatches*`) and the detail page
- * no longer offers "Unirse" to non-invited users — the organizer must
- * `inviteToMatch` explicitly. Public matches keep both: anyone can request
- * to join (`joinMatch`, still needs approval) AND the organizer can invite.
+ * Organizer sets a match's visibility level. "privada" is dropped from the
+ * home/`/partidos` listings and the friends' feed (see `getOpenMatches*`,
+ * `getFriendsMatches`), and the detail page no longer offers "Unirse" to
+ * non-invited users — the organizer must `inviteToMatch` explicitly.
+ * "amigos" is dropped from `/partidos`/the open feed but still shown to the
+ * organizer's friends, who can request to join like on a public match.
+ * "publica" appears everywhere and keeps both: anyone can request to join
+ * (`joinMatch`, still needs approval) AND the organizer can invite.
  */
 export async function setMatchVisibility(formData: FormData): Promise<MatchActionResult> {
   const session = await requireSession();
   const matchId = formData.get("matchId");
-  const isPublic = formData.get("isPublic") === "true";
+  const visibilityRaw = formData.get("visibility");
   if (typeof matchId !== "string") return;
+
+  const values: readonly string[] = MATCH_VISIBILITY_VALUES;
+  if (typeof visibilityRaw !== "string" || !values.includes(visibilityRaw)) {
+    return { message: "Visibilidad inválida." };
+  }
+  const visibility = visibilityRaw as (typeof MATCH_VISIBILITY_VALUES)[number];
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("matches")
-    .update({ is_public: isPublic })
+    .update({ visibility })
     .eq("id", matchId)
     .eq("organizer_id", session.userId);
 

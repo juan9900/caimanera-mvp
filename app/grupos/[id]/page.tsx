@@ -90,9 +90,6 @@ export default async function GroupDetailPage(props: PageProps<"/grupos/[id]">) 
             >
               <div>
                 <p className="font-body text-on-surface">{member.user.name ?? "Jugador"}</p>
-                {member.user.zone && (
-                  <p className="font-body text-sm text-on-surface-variant">{member.user.zone}</p>
-                )}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {member.user.id !== session.userId && member.friendRelation === "ninguna" && (

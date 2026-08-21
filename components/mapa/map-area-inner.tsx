@@ -66,6 +66,7 @@ export function MapAreaInner({
   focusTarget,
   onSelect,
   onBoundsChange,
+  preferredSports,
 }: {
   courts: Court[];
   center: [number, number];
@@ -73,6 +74,7 @@ export function MapAreaInner({
   focusTarget?: MapFocusTarget | null;
   onSelect: (id: string) => void;
   onBoundsChange?: (bounds: MapViewBounds) => void;
+  preferredSports?: string[];
 }) {
   const markerRefs = useRef(new Map<string, LeafletMarker>());
 
@@ -89,7 +91,11 @@ export function MapAreaInner({
             else markerRefs.current.delete(court.id);
           }}
           position={[court.lat, court.lng]}
-          icon={buildCourtIcon(court.sports, { selected: court.id === selectedId })}
+          icon={buildCourtIcon(court.sports, {
+            selected: court.id === selectedId,
+            official: court.is_official,
+            preferredSports,
+          })}
           eventHandlers={{ click: () => onSelect(court.id) }}
         >
           <Popup>
@@ -98,6 +104,9 @@ export function MapAreaInner({
               address={court.address}
               sports={court.sports}
               href={`/canchas/${court.id}`}
+              ratingAvg={court.rating_avg}
+              ratingCount={court.rating_count}
+              official={court.is_official}
             />
           </Popup>
         </Marker>

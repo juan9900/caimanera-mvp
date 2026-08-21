@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   OnboardingFormSchema,
   NotificationScopesSchema,
+  ProfileEditSchema,
   type OnboardingFormState,
 } from "@/lib/auth/definitions";
 
@@ -18,7 +19,9 @@ export async function completeOnboarding(
 
   const validatedFields = OnboardingFormSchema.safeParse({
     name: formData.get("name"),
-    zone: formData.get("zone"),
+    locationLabel: formData.get("locationLabel"),
+    locationLat: formData.get("locationLat"),
+    locationLng: formData.get("locationLng"),
     sportPreferences: formData.getAll("sportPreferences"),
     vibe: formData.get("vibe"),
     notificationScopes: formData.getAll("notificationScopes"),
@@ -28,7 +31,7 @@ export async function completeOnboarding(
     return { errors: validatedFields.error.flatten().fieldErrors };
   }
 
-  const { name, zone, sportPreferences, vibe, notificationScopes } =
+  const { name, locationLabel, locationLat, locationLng, sportPreferences, vibe, notificationScopes } =
     validatedFields.data;
   const supabase = await createClient();
 
@@ -36,7 +39,9 @@ export async function completeOnboarding(
     .from("users")
     .update({
       name,
-      zone,
+      location_label: locationLabel,
+      location_lat: locationLat,
+      location_lng: locationLng,
       sport_preferences: sportPreferences,
       vibe,
       notification_scopes: notificationScopes,
@@ -72,5 +77,48 @@ export async function updateNotificationScopes(
   }
 
   revalidatePath("/perfil");
+  return {};
+}
+
+/**
+ * Updates the current user's location, vibe and favorite sports —
+ * everything editable from `/perfil` besides `name`. The location here is
+ * the same `location_label`/`location_lat`/`location_lng` used app-wide to
+ * center maps and compute distances (`setUserLocation` in
+ * `app/actions/location.ts`), so this is the single place that sets it —
+ * changing it from `/perfil` updates the map/distance everywhere, and
+ * vice versa (both write the same columns and both revalidate the whole
+ * layout).
+ */
+export async function updateProfile(input: {
+  location: { label: string; lat: number; lng: number };
+  vibe: string;
+  sportPreferences: string[];
+}): Promise<{ message?: string }> {
+  const session = await requireSession();
+
+  const parsed = ProfileEditSchema.safeParse(input);
+  if (!parsed.success) {
+    return { message: "No se pudo guardar tu perfil. Revisa los datos e intenta de nuevo." };
+  }
+
+  const { location, vibe, sportPreferences } = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("users")
+    .update({
+      location_label: location.label,
+      location_lat: location.lat,
+      location_lng: location.lng,
+      vibe,
+      sport_preferences: sportPreferences,
+    })
+    .eq("id", session.userId);
+
+  if (error) {
+    return { message: "No se pudo guardar tu perfil. Intenta de nuevo." };
+  }
+
+  revalidatePath("/", "layout");
   return {};
 }

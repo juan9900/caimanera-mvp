@@ -42,7 +42,7 @@ function makeMatch(overrides: Partial<HomeMatch>): HomeMatch {
     total_slots: 10,
     slots_filled: 8,
     status: "abierto",
-    is_public: true,
+    visibility: "publica",
     vibe: "relajado",
     payment_amount_bs: null,
     payment_bank: null,

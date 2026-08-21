@@ -11,5 +11,11 @@ export default async function CanchasPage() {
 
   const [courts, userLocation] = await Promise.all([getCourts(), getUserLocation()]);
 
-  return <MapExperience courts={courts} userLocation={userLocation} />;
+  return (
+    <MapExperience
+      courts={courts}
+      userLocation={userLocation}
+      preferredSports={profile.sport_preferences}
+    />
+  );
 }

@@ -32,6 +32,7 @@ export function HomeClient({
   officialCourts,
   allCourts,
   userLocation,
+  preferredSports,
 }: {
   matches: HomeMatch[];
   friendsMatches: HomeMatch[];
@@ -39,6 +40,7 @@ export function HomeClient({
   officialCourts: HomeCourt[];
   allCourts: Court[];
   userLocation: UserLocation | null;
+  preferredSports?: string[];
 }) {
   const router = useRouter();
   const [sportFilter, setSportFilter] = useState<string[]>([]);
@@ -133,7 +135,7 @@ export function HomeClient({
     <div className="flex flex-1 flex-col gap-8 bg-surface pb-8 text-on-surface">
       <FeaturedCourtsCarousel courts={featuredCourts} distanceByCourtId={distanceByCourtId} />
 
-      <NearbyMapCard courts={allCourts} userLocation={userLocation} />
+      <NearbyMapCard courts={allCourts} userLocation={userLocation} preferredSports={preferredSports} />
 
       <InvitationsSection invitations={invitations} distanceByCourtId={distanceByCourtId} />
 

@@ -9,6 +9,8 @@ import {
   getMyParticipation,
   getMyFriends,
   getMyGroups,
+  getFriendRelations,
+  getGroupRelations,
 } from "@/lib/auth/dal";
 import {
   joinMatch,
@@ -75,12 +77,28 @@ export default async function MatchDetailPage(
   const pending = participants.filter((p) => p.status === "pendiente");
   const invited = participants.filter((p) => p.status === "invitado");
 
+  const pendingUserIds = pending
+    .map((p) => p.user?.id)
+    .filter((id): id is string => Boolean(id));
+  const [pendingFriendRelations, pendingGroupRelations] = isOrganizer
+    ? await Promise.all([
+        getFriendRelations(pendingUserIds),
+        getGroupRelations(pendingUserIds),
+      ])
+    : [new Map<string, string>(), new Set<string>()];
+
+  function relationBadge(userId: string | undefined, joinedVia: string): string {
+    if (userId && pendingFriendRelations.get(userId) === "amigos") return "Amigo";
+    if (userId && pendingGroupRelations.has(userId)) return "Compañero de grupo";
+    return JOINED_VIA_LABELS[joinedVia];
+  }
+
   return (
     <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
       <div className="mb-4">
         <MatchVisibilitySwitch
           matchId={match.id}
-          initialIsPublic={match.is_public}
+          initialVisibility={match.visibility}
           editable={isOrganizer}
         />
       </div>
@@ -100,9 +118,9 @@ export default async function MatchDetailPage(
           >
             {STATUS_LABELS[match.status]}
           </span>
-          {!match.is_public && (
+          {match.visibility !== "publica" && (
             <span className="rounded-full bg-secondary-container/30 px-2 py-0.5 font-label text-xs font-bold text-on-secondary-container">
-              Privada
+              {match.visibility === "amigos" ? "Amigos" : "Privada"}
             </span>
           )}
         </div>
@@ -253,7 +271,7 @@ export default async function MatchDetailPage(
               />
             </div>
           )
-        ) : match.is_public ? (
+        ) : match.visibility !== "privada" ? (
           <MatchActionForm
             action={joinMatch}
             hiddenFields={{ matchId: match.id }}
@@ -279,14 +297,14 @@ export default async function MatchDetailPage(
             groups={groups}
             excludedUserIds={participants.map((p) => p.user_id)}
           />
-          {!match.is_public && (
+          {match.visibility !== "publica" && (
             <div className="mt-4 rounded-xl border border-dashed border-primary-lime/50 bg-secondary-container/20 p-4">
               <p className="font-body text-sm text-on-surface">
                 ¿Sigues necesitando gente? Hazla pública para que cualquiera pueda verla y unirse.
               </p>
               <MatchActionForm
                 action={setMatchVisibility}
-                hiddenFields={{ matchId: match.id, isPublic: "true" }}
+                hiddenFields={{ matchId: match.id, visibility: "publica" }}
                 label="Hacer pública"
                 pendingLabel="Actualizando…"
                 className={`${SMALL_PRIMARY_BUTTON} mt-3`}
@@ -326,37 +344,41 @@ export default async function MatchDetailPage(
             {pending.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3"
+                className="flex flex-col gap-3 rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3"
               >
-                <span className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-body text-on-surface">
                     {p.user?.name ?? "Jugador"}
                   </span>
                   <span className="rounded-full bg-surface-variant px-2 py-0.5 font-label text-xs font-bold text-on-surface-variant">
-                    {JOINED_VIA_LABELS[p.joined_via]}
+                    {relationBadge(p.user?.id, p.joined_via)}
                   </span>
-                </span>
-                <div className="flex gap-2">
-                  <MatchActionForm
-                    action={respondToRequest}
-                    hiddenFields={{
-                      participantId: p.id,
-                      matchId: match.id,
-                      approve: "true",
-                    }}
-                    label="Aprobar"
-                    className={SMALL_PRIMARY_BUTTON}
-                  />
-                  <MatchActionForm
-                    action={respondToRequest}
-                    hiddenFields={{
-                      participantId: p.id,
-                      matchId: match.id,
-                      approve: "false",
-                    }}
-                    label="Rechazar"
-                    className={SMALL_OUTLINE_BUTTON}
-                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <MatchActionForm
+                      action={respondToRequest}
+                      hiddenFields={{
+                        participantId: p.id,
+                        matchId: match.id,
+                        approve: "true",
+                      }}
+                      label="Aprobar"
+                      className={`${SMALL_PRIMARY_BUTTON} w-full text-center`}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <MatchActionForm
+                      action={respondToRequest}
+                      hiddenFields={{
+                        participantId: p.id,
+                        matchId: match.id,
+                        approve: "false",
+                      }}
+                      label="Rechazar"
+                      className={`${SMALL_OUTLINE_BUTTON} w-full text-center`}
+                    />
+                  </div>
                 </div>
               </li>
             ))}

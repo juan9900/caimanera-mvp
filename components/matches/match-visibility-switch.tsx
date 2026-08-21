@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { setMatchVisibility } from "@/app/actions/matches";
 import { VisibilityToggle } from "@/components/matches/visibility-toggle";
+import type { MatchVisibility } from "@/lib/matches/definitions";
 
 /**
  * Wraps `VisibilityToggle` for an existing match: everyone sees it (per
@@ -12,28 +13,29 @@ import { VisibilityToggle } from "@/components/matches/visibility-toggle";
  */
 export function MatchVisibilitySwitch({
   matchId,
-  initialIsPublic,
+  initialVisibility,
   editable,
 }: {
   matchId: string;
-  initialIsPublic: boolean;
+  initialVisibility: MatchVisibility;
   editable: boolean;
 }) {
-  const [isPublic, setIsPublic] = useState(initialIsPublic);
+  const [visibility, setVisibility] = useState(initialVisibility);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function handleChange(next: boolean) {
-    if (next === isPublic) return;
+  function handleChange(next: MatchVisibility) {
+    if (next === visibility) return;
     setError(null);
-    setIsPublic(next);
+    const previous = visibility;
+    setVisibility(next);
     startTransition(async () => {
       const formData = new FormData();
       formData.set("matchId", matchId);
-      formData.set("isPublic", next ? "true" : "false");
+      formData.set("visibility", next);
       const result = await setMatchVisibility(formData);
       if (result?.message) {
-        setIsPublic(!next);
+        setVisibility(previous);
         setError(result.message);
       }
     });
@@ -41,7 +43,7 @@ export function MatchVisibilitySwitch({
 
   return (
     <div>
-      <VisibilityToggle value={isPublic} onChange={handleChange} disabled={!editable || isPending} />
+      <VisibilityToggle value={visibility} onChange={handleChange} disabled={!editable || isPending} />
       {error && <p className="mt-1 font-body text-xs text-dark-error">{error}</p>}
     </div>
   );

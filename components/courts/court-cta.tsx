@@ -60,7 +60,7 @@ export function CourtContactActions({
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => logEvent(courtId, "whatsapp")}
-          className="rounded-lg bg-primary-lime px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-on-primary shadow-[0_4px_12px_rgba(195,244,0,0.2)]"
+          className="rounded-lg bg-primary-lime px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-on-primary"
         >
           WhatsApp
         </a>
@@ -71,7 +71,7 @@ export function CourtContactActions({
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => logEvent(courtId, "booking")}
-          className="rounded-lg bg-primary-lime px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-on-primary shadow-[0_4px_12px_rgba(195,244,0,0.2)]"
+          className="rounded-lg bg-primary-lime px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-on-primary"
         >
           Reservar
         </a>

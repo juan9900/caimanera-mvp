@@ -67,11 +67,6 @@ export default async function RedPage() {
                   <p className="font-body text-on-surface">
                     {request.user.name ?? "Jugador"}
                   </p>
-                  {request.user.zone && (
-                    <p className="font-body text-sm text-on-surface-variant">
-                      {request.user.zone}
-                    </p>
-                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <MatchActionForm
@@ -108,11 +103,6 @@ export default async function RedPage() {
                   <p className="font-body text-on-surface">
                     {request.user.name ?? "Jugador"}
                   </p>
-                  {request.user.zone && (
-                    <p className="font-body text-sm text-on-surface-variant">
-                      {request.user.zone}
-                    </p>
-                  )}
                 </div>
                 <MatchActionForm
                   action={cancelFriendRequest}
@@ -143,11 +133,6 @@ export default async function RedPage() {
             >
               <div>
                 <p className="font-body text-on-surface">{friend.user.name ?? "Jugador"}</p>
-                {friend.user.zone && (
-                  <p className="font-body text-sm text-on-surface-variant">
-                    {friend.user.zone}
-                  </p>
-                )}
               </div>
               <MatchActionForm
                 action={removeFriend}
@@ -198,12 +183,7 @@ export default async function RedPage() {
         </h2>
         <div className="rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
           {inviter ? (
-            <p className="font-body text-on-surface">
-              {inviter.name ?? "Jugador"}
-              {inviter.zone && (
-                <span className="text-on-surface-variant"> · {inviter.zone}</span>
-              )}
-            </p>
+            <p className="font-body text-on-surface">{inviter.name ?? "Jugador"}</p>
           ) : (
             <p className="font-body text-sm text-on-surface-variant">
               Entraste como fundador, sin invitación.
@@ -235,9 +215,6 @@ export default async function RedPage() {
           {invitees.map((user) => (
             <li key={user.id} className="rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
               <p className="font-body text-on-surface">{user.name ?? "Jugador"}</p>
-              {user.zone && (
-                <p className="font-body text-sm text-on-surface-variant">{user.zone}</p>
-              )}
             </li>
           ))}
         </ul>

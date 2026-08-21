@@ -3,7 +3,7 @@ import {
   verifySession,
   getCurrentUserProfile,
   getOpenMatchesWithCourtGeo,
-  getFriendsPrivateMatches,
+  getFriendsMatches,
   getMyInvitations,
   getOfficialCourts,
   getCourts,
@@ -21,7 +21,7 @@ export default async function Home() {
   const [matches, friendsMatches, invitations, officialCourts, allCourts, userLocation] =
     await Promise.all([
       getOpenMatchesWithCourtGeo(),
-      getFriendsPrivateMatches(),
+      getFriendsMatches(),
       getMyInvitations(),
       getOfficialCourts(),
       getCourts(),
@@ -36,6 +36,7 @@ export default async function Home() {
       officialCourts={officialCourts}
       allCourts={allCourts}
       userLocation={userLocation}
+      preferredSports={profile.sport_preferences}
     />
   );
 }

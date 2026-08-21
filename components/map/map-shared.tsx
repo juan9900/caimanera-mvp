@@ -3,8 +3,10 @@
 import { TileLayer } from "react-leaflet";
 import L from "leaflet";
 import Link from "next/link";
+import { BadgeCheck } from "lucide-react";
 import { getSport, SportIcon } from "@/lib/courts/sports";
 import { renderIconSvg, renderIconSource } from "@/lib/icons/svg-icon";
+import { RatingStars } from "@/components/courts/rating-stars";
 
 // CARTO's free "dark_all" basemap — no API key required. Matches the app's
 // "High-Velocity" dark theme instead of Leaflet's default light OpenStreetMap
@@ -35,55 +37,119 @@ const GENERIC_PIN_NODE = renderIconSvg(
   { size: 14, color: "#c3f400" },
 );
 
-// Lucide `Layers` glyph used when a court offers more than one sport (e.g. a
-// multi-cancha complex), so it reads visually as "several things here"
-// instead of the "no sport data" pin above.
-const MULTI_SPORT_PIN_NODE = renderIconSvg(
+const iconCache = new Map<string, L.DivIcon>();
+
+const MAX_PIN_SPORTS = 3;
+
+/**
+ * Which of a court's sports to show as icons on its pin, and in what order:
+ * the viewer's favorite sports that this court offers come first (in the
+ * viewer's preference order), then the court's remaining sports fill any
+ * leftover slots (in catalog order) — capped at `MAX_PIN_SPORTS`. Without
+ * `preferredSports` (e.g. logged-out previews) this is just the court's own
+ * sports in order.
+ */
+function pickPinSports(sports: string[], preferredSports: string[] | undefined): string[] {
+  const favorites = (preferredSports ?? []).filter((key) => sports.includes(key));
+  const rest = sports.filter((key) => !favorites.includes(key));
+  return [...favorites, ...rest].slice(0, MAX_PIN_SPORTS);
+}
+
+/** "+N" label appended after the 3 sport icons when a court offers more than `MAX_PIN_SPORTS`. */
+function overflowLabel(count: number): string {
+  return `<span class="font-display text-[11px] font-extrabold leading-none text-primary-lime">+${count}</span>`;
+}
+
+// Lucide `badge-check` glyph — same icon as the "Oficial" chip everywhere
+// else in the app (court-hero, official-upsell), so the pin badge reads as
+// the same "verified" signal instead of a generic checkmark.
+const OFFICIAL_BADGE_GLYPH = renderIconSvg(
   [
     [
       "path",
       {
-        d: "m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z",
+        d: "M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z",
       },
     ],
-    ["path", { d: "m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" }],
-    ["path", { d: "m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" }],
+    ["path", { d: "m9 12 2 2 4-4" }],
   ],
-  { size: 14, color: "#c3f400" },
+  { size: 11, color: "currentColor", strokeWidth: 2.5 },
 );
 
-const iconCache = new Map<string, L.DivIcon>();
-
 /**
- * Round dark pin with a lime glyph inside: the sport's icon when a court
- * offers exactly one, a stacked "layers" glyph when it offers several (a
- * multi-cancha complex), otherwise a generic location pin. Used by every
+ * Dark pin with lime glyphs inside: a court's sport icon(s), prioritizing
+ * the viewer's favorite sports (`opts.preferredSports`, from
+ * `profile.sport_preferences`) — see `pickPinSports`. Zero sports falls back
+ * to a generic location pin; one sport is a round badge with its icon;
+ * two or more render as a horizontal pill of up to `MAX_PIN_SPORTS` icons,
+ * plus a "+N" tail when the court offers more than that. Official courts
+ * get a small "verified" badge on the corner of the pin. Used by every
  * court marker in the app (display maps, picker, home card, `/mapa`).
  */
-export function buildCourtIcon(sports: string[] | null | undefined, opts: { selected?: boolean } = {}): L.DivIcon {
-  const key = `${(sports ?? []).join(",")}|${opts.selected ? "sel" : ""}`;
+export function buildCourtIcon(
+  sports: string[] | null | undefined,
+  opts: { selected?: boolean; official?: boolean; preferredSports?: string[] } = {},
+): L.DivIcon {
+  const key = `${(sports ?? []).join(",")}|${(opts.preferredSports ?? []).join(",")}|${opts.selected ? "sel" : ""}|${opts.official ? "off" : ""}`;
   const cached = iconCache.get(key);
   if (cached) return cached;
 
-  const count = sports?.length ?? 0;
-  const single = count === 1 ? getSport(sports![0]) : undefined;
-  const glyph = single
-    ? renderIconSource(single.icon, { size: 14, color: "#c3f400" })
-    : count > 1
-      ? MULTI_SPORT_PIN_NODE
-      : GENERIC_PIN_NODE;
+  const allSports = sports ?? [];
+  const shown = pickPinSports(allSports, opts.preferredSports);
+  const overflow = allSports.length - shown.length;
 
-  const size = opts.selected ? 40 : 32;
+  const badge = opts.official
+    ? `<span class="absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-secondary-container text-on-secondary-container ring-2 ring-surface-container" style="width:16px;height:16px">${OFFICIAL_BADGE_GLYPH}</span>`
+    : "";
 
-  const icon = L.divIcon({
-    className: "",
-    html: `<span class="flex items-center justify-center rounded-full bg-surface-container ${
-      opts.selected ? "border-2 border-primary-lime shadow-[0_0_0_4px_rgba(195,244,0,0.25)]" : "border border-primary-lime/70"
-    } shadow-md" style="width:${size}px;height:${size}px">${glyph}</span>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    popupAnchor: [0, -size / 2],
-  });
+  let icon: L.DivIcon;
+
+  if (shown.length <= 1) {
+    // Zero or one sport: the original round badge.
+    const single = shown.length === 1 ? getSport(shown[0]) : undefined;
+    const glyph = single ? renderIconSource(single.icon, { size: 14, color: "#c3f400" }) : GENERIC_PIN_NODE;
+    const size = opts.selected ? 40 : 32;
+
+    icon = L.divIcon({
+      className: "",
+      html: `<span class="relative flex items-center justify-center rounded-full bg-surface-container ${
+        opts.selected ? "border-2 border-primary-lime shadow-[0_0_0_4px_rgba(195,244,0,0.25)]" : "border border-primary-lime/70"
+      } shadow-md" style="width:${size}px;height:${size}px">${glyph}${badge}</span>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -size / 2],
+    });
+  } else {
+    // Several sports: a horizontal pill of icons (+ "+N" tail if the court offers more than shown).
+    // Width is computed (not left to CSS auto-sizing) so it matches the
+    // `iconSize`/`iconAnchor` Leaflet needs to place and center the marker.
+    const iconSize = 13;
+    const gap = 4;
+    const padX = 10; // matches the wrapper's `px-2.5`
+    const tailWidth = overflow > 0 ? 16 : 0;
+    const contentWidth =
+      shown.length * iconSize + (shown.length - 1) * gap + (overflow > 0 ? gap + tailWidth : 0);
+    const width = contentWidth + padX * 2;
+    const height = opts.selected ? 40 : 32;
+
+    const glyphs = shown
+      .map((sportKey) => {
+        const sport = getSport(sportKey);
+        return sport ? renderIconSource(sport.icon, { size: iconSize, color: "#c3f400" }) : "";
+      })
+      .join("");
+    const tail = overflow > 0 ? overflowLabel(overflow) : "";
+
+    icon = L.divIcon({
+      className: "",
+      html: `<span class="relative flex items-center justify-center rounded-full bg-surface-container px-2.5 ${
+        opts.selected ? "border-2 border-primary-lime shadow-[0_0_0_4px_rgba(195,244,0,0.25)]" : "border border-primary-lime/70"
+      } shadow-md" style="width:${width}px;height:${height}px;gap:${gap}px">${glyphs}${tail}${badge}</span>`,
+      iconSize: [width, height],
+      iconAnchor: [width / 2, height / 2],
+      popupAnchor: [0, -height / 2],
+    });
+  }
 
   iconCache.set(key, icon);
   return icon;
@@ -99,18 +165,33 @@ export function CourtPopupContent({
   address,
   sports,
   href,
+  ratingAvg,
+  ratingCount,
+  official,
 }: {
   name: string;
   address?: string | null;
   sports?: string[] | null;
   href?: string;
+  ratingAvg?: number;
+  ratingCount?: number;
+  official?: boolean;
 }) {
   const multi = sports && sports.length > 1;
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="font-semibold text-on-surface">{name}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="font-semibold text-on-surface">{name}</span>
+        {official && (
+          <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-secondary-container/90 px-1.5 py-0.5 font-label text-[10px] font-bold text-on-secondary-container">
+            <BadgeCheck aria-hidden size={11} />
+            Oficial
+          </span>
+        )}
+      </div>
       {address && <span className="text-xs text-on-surface-variant">{address}</span>}
+      {ratingCount !== undefined && <RatingStars avg={ratingAvg ?? 0} count={ratingCount} />}
       {multi && (
         <div className="flex flex-wrap gap-1">
           {sports!.map((key) => {

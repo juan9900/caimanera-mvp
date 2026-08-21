@@ -53,7 +53,9 @@ describe("OnboardingFormSchema", () => {
   it("accepts a valid onboarding payload", () => {
     const result = OnboardingFormSchema.safeParse({
       name: "Juan",
-      zone: "La Lago",
+      locationLabel: "Maracaibo, Zulia",
+      locationLat: "10.6316",
+      locationLng: "-71.6444",
       sportPreferences: ["futbol"],
       vibe: "relajado",
     });
@@ -75,7 +77,9 @@ describe("OnboardingFormSchema", () => {
   it("rejects an invalid vibe", () => {
     const result = OnboardingFormSchema.safeParse({
       name: "Juan",
-      zone: "La Lago",
+      locationLabel: "Maracaibo, Zulia",
+      locationLat: "10.6316",
+      locationLng: "-71.6444",
       sportPreferences: ["futbol"],
       vibe: "loco",
     });

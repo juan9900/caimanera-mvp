@@ -37,9 +37,11 @@ const NEARBY_RADIUS_KM = 15;
 export function MapExperience({
   courts,
   userLocation,
+  preferredSports,
 }: {
   courts: Court[];
   userLocation: UserLocation | null;
+  preferredSports?: string[];
 }) {
   const router = useRouter();
   const [sport, setSport] = useState<string | null>(null);
@@ -261,6 +263,7 @@ export function MapExperience({
             focusTarget={focusTarget}
             onBoundsChange={handleBoundsChange}
             onSelect={setSelectedId}
+            preferredSports={preferredSports}
           />
         </div>
 

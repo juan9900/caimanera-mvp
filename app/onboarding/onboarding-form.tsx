@@ -2,6 +2,10 @@
 
 import { useActionState, useState } from "react";
 import { completeOnboarding } from "@/app/actions/profile";
+import { SPORTS } from "@/lib/courts/sports";
+import { SportChip } from "@/components/courts/sport-chip";
+import { CityPicker } from "@/components/location/city-picker";
+import type { LocationCandidate } from "@/app/actions/location";
 
 const NOTIFICATION_OPTIONS = [
   { value: "red", label: "Personas de mi red" },
@@ -12,12 +16,20 @@ const NOTIFICATION_OPTIONS = [
 export function OnboardingForm() {
   const [state, action, pending] = useActionState(completeOnboarding, undefined);
   const [notificationScopes, setNotificationScopes] = useState<string[]>([]);
+  const [sportPreferences, setSportPreferences] = useState<string[]>([]);
+  const [location, setLocation] = useState<LocationCandidate | null>(null);
 
   const noNotifications = notificationScopes.length === 0;
 
   function toggleScope(value: string) {
     setNotificationScopes((prev) =>
       prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  }
+
+  function toggleSport(key: string) {
+    setSportPreferences((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   }
 
@@ -38,24 +50,54 @@ export function OnboardingForm() {
       </div>
 
       <div>
-        <label htmlFor="zone" className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-          Zona en Maracaibo
-        </label>
-        <input
-          id="zone"
-          name="zone"
-          placeholder="Ej: La Lago"
-          className="mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary-lime focus:outline-none"
-        />
-        {state?.errors?.zone && (
-          <p className="mt-1 font-body text-sm text-dark-error">{state.errors.zone[0]}</p>
+        <span className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+          Ciudad
+        </span>
+        {location ? (
+          <button
+            type="button"
+            onClick={() => setLocation(null)}
+            className="mt-1 flex w-full items-center justify-between rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface"
+          >
+            {location.label}
+            <span className="font-label text-xs text-primary-lime">Cambiar</span>
+          </button>
+        ) : (
+          <div className="mt-1 rounded-lg border border-surface-variant bg-surface-container p-3">
+            <CityPicker onSelect={setLocation} />
+          </div>
+        )}
+        <input type="hidden" name="locationLabel" value={location?.label ?? ""} />
+        <input type="hidden" name="locationLat" value={location?.lat ?? ""} />
+        <input type="hidden" name="locationLng" value={location?.lng ?? ""} />
+        {(state?.errors?.locationLabel || state?.errors?.locationLat || state?.errors?.locationLng) && (
+          <p className="mt-1 font-body text-sm text-dark-error">
+            {state.errors.locationLabel?.[0] ?? state.errors.locationLat?.[0] ?? state.errors.locationLng?.[0]}
+          </p>
         )}
       </div>
 
-      <input type="hidden" name="sportPreferences" value="futbol" />
-      {state?.errors?.sportPreferences && (
-        <p className="mt-1 font-body text-sm text-dark-error">{state.errors.sportPreferences[0]}</p>
-      )}
+      <fieldset>
+        <legend className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+          Deportes favoritos
+        </legend>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {SPORTS.map(({ key }) => (
+            <SportChip
+              key={key}
+              sportKey={key}
+              active={sportPreferences.includes(key)}
+              onClick={() => toggleSport(key)}
+            />
+          ))}
+        </div>
+        {sportPreferences.map((key) => (
+          <input key={key} type="hidden" name="sportPreferences" value={key} />
+        ))}
+        {state?.errors?.sportPreferences && (
+          <p className="mt-1 font-body text-sm text-dark-error">{state.errors.sportPreferences[0]}</p>
+        )}
+      </fieldset>
 
       <fieldset>
         <legend className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">

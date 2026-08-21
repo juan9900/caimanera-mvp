@@ -53,6 +53,48 @@ export type Database = {
           },
         ]
       }
+      court_ratings: {
+        Row: {
+          court_id: string
+          created_at: string
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          court_id: string
+          created_at?: string
+          id?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          court_id?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_ratings_court_id_fkey"
+            columns: ["court_id"]
+            isOneToOne: false
+            referencedRelation: "courts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "court_ratings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courts: {
         Row: {
           added_by: string
@@ -74,6 +116,8 @@ export type Database = {
           promo_code: string | null
           promo_expires_at: string | null
           promo_text: string | null
+          rating_avg: number
+          rating_count: number
           schedule: string | null
           sponsor_priority: number
           sponsored_until: string | null
@@ -100,6 +144,8 @@ export type Database = {
           promo_code?: string | null
           promo_expires_at?: string | null
           promo_text?: string | null
+          rating_avg?: number
+          rating_count?: number
           schedule?: string | null
           sponsor_priority?: number
           sponsored_until?: string | null
@@ -126,6 +172,8 @@ export type Database = {
           promo_code?: string | null
           promo_expires_at?: string | null
           promo_text?: string | null
+          rating_avg?: number
+          rating_count?: number
           schedule?: string | null
           sponsor_priority?: number
           sponsored_until?: string | null
@@ -316,7 +364,6 @@ export type Database = {
           created_at: string
           datetime: string
           id: string
-          is_public: boolean
           organizer_id: string
           payment_amount_bs: number | null
           payment_bank: string | null
@@ -328,13 +375,13 @@ export type Database = {
           status: Database["public"]["Enums"]["match_status"]
           total_slots: number
           vibe: Database["public"]["Enums"]["vibe_type"]
+          visibility: Database["public"]["Enums"]["match_visibility"]
         }
         Insert: {
           court_id: string
           created_at?: string
           datetime: string
           id?: string
-          is_public?: boolean
           organizer_id: string
           payment_amount_bs?: number | null
           payment_bank?: string | null
@@ -346,13 +393,13 @@ export type Database = {
           status?: Database["public"]["Enums"]["match_status"]
           total_slots: number
           vibe: Database["public"]["Enums"]["vibe_type"]
+          visibility?: Database["public"]["Enums"]["match_visibility"]
         }
         Update: {
           court_id?: string
           created_at?: string
           datetime?: string
           id?: string
-          is_public?: boolean
           organizer_id?: string
           payment_amount_bs?: number | null
           payment_bank?: string | null
@@ -364,6 +411,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["match_status"]
           total_slots?: number
           vibe?: Database["public"]["Enums"]["vibe_type"]
+          visibility?: Database["public"]["Enums"]["match_visibility"]
         }
         Relationships: [
           {
@@ -533,6 +581,7 @@ export type Database = {
       group_member_status: "invitado" | "miembro"
       joined_via_type: "red_directa" | "externo"
       match_status: "abierto" | "completo" | "cancelado" | "vencido"
+      match_visibility: "publica" | "amigos" | "privada"
       participant_status: "confirmado" | "pendiente" | "rechazado" | "invitado"
       vibe_type: "relajado" | "competitivo"
     }
@@ -666,6 +715,7 @@ export const Constants = {
       group_member_status: ["invitado", "miembro"],
       joined_via_type: ["red_directa", "externo"],
       match_status: ["abierto", "completo", "cancelado", "vencido"],
+      match_visibility: ["publica", "amigos", "privada"],
       participant_status: ["confirmado", "pendiente", "rechazado", "invitado"],
       vibe_type: ["relajado", "competitivo"],
     },

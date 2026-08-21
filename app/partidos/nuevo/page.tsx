@@ -20,7 +20,7 @@ export default async function NuevoPartidoPage() {
           Todavía no hay canchas disponibles. Pronto el administrador cargará canchas.
         </p>
       ) : (
-        <CreateMatchForm courts={courts} />
+        <CreateMatchForm courts={courts} preferredSports={profile.sport_preferences} />
       )}
     </div>
   );

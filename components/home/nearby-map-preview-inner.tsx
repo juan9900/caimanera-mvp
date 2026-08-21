@@ -9,9 +9,11 @@ import type { HomeCourt } from "@/lib/matches/home";
 export function NearbyMapPreviewInner({
   courts,
   center,
+  preferredSports,
 }: {
   courts: HomeCourt[];
   center: [number, number];
+  preferredSports?: string[];
 }) {
   return (
     <MapContainer
@@ -28,7 +30,11 @@ export function NearbyMapPreviewInner({
     >
       <DarkTiles />
       {courts.map((court) => (
-        <Marker key={court.id} position={[court.lat, court.lng]} icon={buildCourtIcon(court.sports)} />
+        <Marker
+          key={court.id}
+          position={[court.lat, court.lng]}
+          icon={buildCourtIcon(court.sports, { official: court.is_official, preferredSports })}
+        />
       ))}
     </MapContainer>
   );

@@ -8,7 +8,7 @@ import { CourtPicker } from "@/components/courts/court-picker";
 import { SportChip } from "@/components/courts/sport-chip";
 import { VisibilityToggle } from "@/components/matches/visibility-toggle";
 import type { Court } from "@/lib/auth/dal";
-import { BANK_OPTIONS } from "@/lib/matches/definitions";
+import { BANK_OPTIONS, type MatchVisibility } from "@/lib/matches/definitions";
 import { SPORTS } from "@/lib/courts/sports";
 import { sortCourtsForCreateMatchPicker } from "@/lib/courts/sort";
 
@@ -16,11 +16,17 @@ const INPUT_CLASSNAME =
   "mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface focus:border-primary-lime focus:outline-none";
 const LABEL_CLASSNAME = "block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant";
 
-export function CreateMatchForm({ courts }: { courts: Court[] }) {
+export function CreateMatchForm({
+  courts,
+  preferredSports,
+}: {
+  courts: Court[];
+  preferredSports?: string[];
+}) {
   const [state, action, pending] = useActionState(createMatch, undefined);
   const [sport, setSport] = useState("futbol");
   const [courtId, setCourtId] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
+  const [visibility, setVisibility] = useState<MatchVisibility>("publica");
   const [notifyAudience, setNotifyAudience] = useState(false);
   const [totalSlots, setTotalSlots] = useState(10);
   const [paymentAmountBs, setPaymentAmountBs] = useState("");
@@ -47,11 +53,11 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
     <form action={action} className="w-full space-y-5">
       <div>
         <span className={LABEL_CLASSNAME}>Visibilidad</span>
-        <input type="hidden" name="isPublic" value={isPublic ? "true" : "false"} />
+        <input type="hidden" name="visibility" value={visibility} />
         <div className="mt-1">
-          <VisibilityToggle value={isPublic} onChange={setIsPublic} />
+          <VisibilityToggle value={visibility} onChange={setVisibility} />
         </div>
-        {isPublic && (
+        {visibility === "publica" && (
           <>
             <input
               type="hidden"
@@ -105,6 +111,7 @@ export function CreateMatchForm({ courts }: { courts: Court[] }) {
                   courts={mappableCourts}
                   selectedId={courtId || null}
                   onSelect={setCourtId}
+                  preferredSports={preferredSports}
                 />
                 <p className="mt-1 font-body text-xs text-on-surface-variant">
                   Toca un marcador para elegir la cancha oficial.

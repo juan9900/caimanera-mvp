@@ -17,9 +17,11 @@ import type { UserLocation } from "@/lib/auth/dal";
 export function NearbyMapCard({
   courts,
   userLocation,
+  preferredSports,
 }: {
   courts: HomeCourt[];
   userLocation: UserLocation | null;
+  preferredSports?: string[];
 }) {
   const finite = courts.filter(
     (c) => Number.isFinite(c.lat) && Number.isFinite(c.lng),
@@ -64,7 +66,12 @@ export function NearbyMapCard({
           {/* react-leaflet's `center` only applies on mount, not on prop
               updates — keying by the coordinates forces a clean remount
               (already-centered) whenever the user's location changes. */}
-          <NearbyMapPreview key={`${center[0]},${center[1]}`} courts={mappable} center={center} />
+          <NearbyMapPreview
+            key={`${center[0]},${center[1]}`}
+            courts={mappable}
+            center={center}
+            preferredSports={preferredSports}
+          />
         </div>
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/70 via-transparent to-transparent" />

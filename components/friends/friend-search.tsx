@@ -79,9 +79,6 @@ export function FriendSearch() {
               >
                 <div>
                   <p className="font-body text-on-surface">{user.name ?? "Jugador"}</p>
-                  {user.zone && (
-                    <p className="font-body text-sm text-on-surface-variant">{user.zone}</p>
-                  )}
                 </div>
                 <button
                   type="button"

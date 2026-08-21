@@ -1,5 +1,8 @@
 import * as z from "zod";
 import { SPORT_CATALOG_KEYS } from "@/lib/courts/sports";
+import type { Enums } from "@/lib/supabase/database.types";
+
+export type MatchVisibility = Enums<"match_visibility">;
 
 export const BANK_OPTIONS = [
   "Banesco",
@@ -31,7 +34,10 @@ export const CreateMatchFormSchema = z
     vibe: z.enum(["relajado", "competitivo"], {
       error: "Selecciona una vibra.",
     }),
-    isPublic: z.coerce.boolean().optional().default(true),
+    visibility: z
+      .enum(["publica", "amigos", "privada"], { error: "Selecciona una visibilidad." })
+      .optional()
+      .default("publica"),
     // Opt-in: crear un partido no avisa a nadie salvo que el organizador lo
     // pida explícitamente. Solo aplica a partidos públicos.
     notifyAudience: z.coerce.boolean().optional().default(false),

@@ -83,7 +83,6 @@ export function GroupUserSearch({
               key={user.id}
               id={user.id}
               name={user.name}
-              zone={user.zone}
               relation={sentTo.has(user.id) ? "invitado" : user.groupRelation}
               disabled={isSending}
               onInvite={handleInvite}
@@ -103,7 +102,6 @@ export function GroupUserSearch({
                 key={user.id}
                 id={user.id}
                 name={user.name}
-                zone={user.zone}
                 relation={sentTo.has(user.id) ? "invitado" : groupRelation}
                 disabled={isSending}
                 onInvite={handleInvite}
@@ -119,14 +117,12 @@ export function GroupUserSearch({
 function InviteRow({
   id,
   name,
-  zone,
   relation,
   disabled,
   onInvite,
 }: {
   id: string;
   name: string | null;
-  zone: string | null;
   relation: GroupUserSearchResult["groupRelation"];
   disabled: boolean;
   onInvite: (userId: string) => void;
@@ -136,7 +132,6 @@ function InviteRow({
     <li className="flex items-center justify-between rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
       <div>
         <p className="font-body text-on-surface">{name ?? "Jugador"}</p>
-        {zone && <p className="font-body text-sm text-on-surface-variant">{zone}</p>}
       </div>
       <button
         type="button"

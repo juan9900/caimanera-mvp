@@ -1,17 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Compass, Goal, MapPin, User, Plus } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Compass, Goal, Mail, MapPin, Plus } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+const REALTIME_REFRESH_DEBOUNCE_MS = 800;
 
 const LEFT_TABS = [
-  { href: "/", label: "Explorar", Icon: Compass },
+  { href: "/", label: "Inicio", Icon: Compass },
   { href: "/partidos", label: "Partidos", Icon: Goal },
 ] as const;
 
 const RIGHT_TABS = [
   { href: "/canchas", label: "Canchas", Icon: MapPin },
-  { href: "/perfil", label: "Perfil", Icon: User },
+  { href: "/invitaciones", label: "Invitaciones", Icon: Mail },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -24,11 +28,13 @@ function NavTab({
   label,
   Icon,
   active,
+  badgeCount,
 }: {
   href: string;
   label: string;
   Icon: typeof Compass;
   active: boolean;
+  badgeCount?: number;
 }) {
   return (
     <Link
@@ -38,7 +44,14 @@ function NavTab({
       }`}
       aria-current={active ? "page" : undefined}
     >
-      <Icon aria-hidden size={22} strokeWidth={active ? 2.25 : 1.75} />
+      <span className="relative">
+        <Icon aria-hidden size={22} strokeWidth={active ? 2.25 : 1.75} />
+        {!!badgeCount && badgeCount > 0 && (
+          <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-lime px-1 font-label text-[10px] font-bold text-on-primary">
+            {badgeCount > 9 ? "9+" : badgeCount}
+          </span>
+        )}
+      </span>
       <span className={`font-label text-[10px] ${active ? "font-semibold" : ""}`}>{label}</span>
     </Link>
   );
@@ -46,10 +59,34 @@ function NavTab({
 
 /**
  * App-style floating bottom tab bar with a central FAB that creates a match.
- * Active tab is derived from the current pathname.
+ * Active tab is derived from the current pathname. Primary navigation for
+ * every screen size (see `components/header-nav.tsx` for the secondary
+ * Social/Account menus in the header).
  */
-export function BottomNavInner() {
+export function BottomNavInner({ invitationCount }: { invitationCount: number }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Realtime: refresh so the Invitaciones badge stays accurate without a full reload.
+  useEffect(() => {
+    const supabase = createClient();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const scheduleRefresh = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => router.refresh(), REALTIME_REFRESH_DEBOUNCE_MS);
+    };
+
+    const channel = supabase
+      .channel("bottom-nav-invitations")
+      .on("postgres_changes", { event: "*", schema: "public", table: "match_participants" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "group_members" }, scheduleRefresh)
+      .subscribe();
+
+    return () => {
+      clearTimeout(timeout);
+      supabase.removeChannel(channel);
+    };
+  }, [router]);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-outline-variant/50 bg-surface-container/90 pb-safe backdrop-blur-xl">
@@ -69,7 +106,14 @@ export function BottomNavInner() {
         </div>
 
         {RIGHT_TABS.map(({ href, label, Icon }) => (
-          <NavTab key={href} href={href} label={label} Icon={Icon} active={isActive(pathname, href)} />
+          <NavTab
+            key={href}
+            href={href}
+            label={label}
+            Icon={Icon}
+            active={isActive(pathname, href)}
+            badgeCount={href === "/invitaciones" ? invitationCount : undefined}
+          />
         ))}
       </div>
     </nav>

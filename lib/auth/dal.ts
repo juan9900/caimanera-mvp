@@ -451,6 +451,35 @@ export type UserSearchResult = NetworkUser & {
   relation: FriendRelation;
 };
 
+/** Fetches the current user's friendship relation with each given user id. Empty ids array short-circuits. */
+export async function getFriendRelations(userIds: string[]): Promise<Map<string, FriendRelation>> {
+  const session = await verifySession();
+  if (!session || userIds.length === 0) return new Map();
+
+  const supabase = await createClient();
+  const { data: friendships } = await supabase
+    .from("friendships")
+    .select("requester_id, addressee_id, status")
+    .or(
+      `and(requester_id.eq.${session.userId},addressee_id.in.(${userIds.join(",")})),and(addressee_id.eq.${session.userId},requester_id.in.(${userIds.join(",")}))`
+    );
+
+  const relationByUserId = new Map<string, FriendRelation>();
+  for (const f of friendships ?? []) {
+    const otherId = f.requester_id === session.userId ? f.addressee_id : f.requester_id;
+    if (f.status === "aceptada") {
+      relationByUserId.set(otherId, "amigos");
+    } else if (f.status === "pendiente") {
+      relationByUserId.set(
+        otherId,
+        f.requester_id === session.userId ? "pendiente_enviada" : "pendiente_recibida"
+      );
+    }
+  }
+
+  return relationByUserId;
+}
+
 /** Searches other users by name or phone, tagging each with the current friendship relation. */
 export const searchUsers = async (query: string): Promise<UserSearchResult[]> => {
   const session = await verifySession();
@@ -469,26 +498,7 @@ export const searchUsers = async (query: string): Promise<UserSearchResult[]> =>
 
   if (!users || users.length === 0) return [];
 
-  const ids = users.map((u) => u.id);
-  const { data: friendships } = await supabase
-    .from("friendships")
-    .select("requester_id, addressee_id, status")
-    .or(
-      `and(requester_id.eq.${session.userId},addressee_id.in.(${ids.join(",")})),and(addressee_id.eq.${session.userId},requester_id.in.(${ids.join(",")}))`
-    );
-
-  const relationByUserId = new Map<string, FriendRelation>();
-  for (const f of friendships ?? []) {
-    const otherId = f.requester_id === session.userId ? f.addressee_id : f.requester_id;
-    if (f.status === "aceptada") {
-      relationByUserId.set(otherId, "amigos");
-    } else if (f.status === "pendiente") {
-      relationByUserId.set(
-        otherId,
-        f.requester_id === session.userId ? "pendiente_enviada" : "pendiente_recibida"
-      );
-    }
-  }
+  const relationByUserId = await getFriendRelations(users.map((u) => u.id));
 
   return users.map((user) => ({
     ...user,
@@ -779,6 +789,7 @@ export type GroupMemberRow = {
   membershipId: string;
   status: "miembro" | "invitado";
   user: NetworkUser;
+  friendRelation: FriendRelation;
 };
 
 export type GroupSummary = {
@@ -874,9 +885,16 @@ export const getGroup = cache(async (groupId: string): Promise<GroupDetail | nul
     .eq("group_id", groupId)
     .order("created_at", { ascending: true });
 
-  const rows: GroupMemberRow[] = (memberRows ?? [])
-    .filter((row): row is typeof row & { user: NetworkUser } => row.user !== null)
-    .map((row) => ({ membershipId: row.id, status: row.status, user: row.user }));
+  const validRows = (memberRows ?? []).filter(
+    (row): row is typeof row & { user: NetworkUser } => row.user !== null
+  );
+  const relationByUserId = await getFriendRelations(validRows.map((row) => row.user.id));
+  const rows: GroupMemberRow[] = validRows.map((row) => ({
+    membershipId: row.id,
+    status: row.status,
+    user: row.user,
+    friendRelation: row.user.id === session.userId ? "amigos" : relationByUserId.get(row.user.id) ?? "ninguna",
+  }));
 
   return {
     group,

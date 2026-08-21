@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { verifySession, getCurrentUserProfile, getGroup } from "@/lib/auth/dal";
+import { verifySession, getCurrentUserProfile, getGroup, getMyFriends } from "@/lib/auth/dal";
 import {
   leaveGroup,
   deleteGroup,
@@ -10,6 +10,7 @@ import { MatchActionForm } from "@/components/match-action-form";
 import { CopyInviteLink } from "@/components/copy-invite-link";
 import { RenameGroupForm } from "@/components/groups/rename-group-form";
 import { GroupUserSearch } from "@/components/groups/group-user-search";
+import { AddFriendButton } from "@/components/friends/add-friend-button";
 
 export default async function GroupDetailPage(props: PageProps<"/grupos/[id]">) {
   const session = await verifySession();
@@ -24,6 +25,18 @@ export default async function GroupDetailPage(props: PageProps<"/grupos/[id]">) 
 
   const { group, isOwner, members, invited } = detail;
   const isMember = isOwner || members.some((m) => m.user.id === session.userId);
+
+  const friends = isMember ? await getMyFriends() : [];
+  const memberIds = new Set(members.map((m) => m.user.id));
+  const invitedIds = new Set(invited.map((m) => m.user.id));
+  const inviteFriends = friends.map(({ user }) => ({
+    user,
+    groupRelation: memberIds.has(user.id)
+      ? ("miembro" as const)
+      : invitedIds.has(user.id)
+        ? ("invitado" as const)
+        : ("ninguna" as const),
+  }));
 
   return (
     <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
@@ -40,7 +53,7 @@ export default async function GroupDetailPage(props: PageProps<"/grupos/[id]">) 
           <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
             Invitar a una persona
           </h2>
-          <GroupUserSearch groupId={group.id} />
+          <GroupUserSearch groupId={group.id} friends={inviteFriends} />
         </section>
       )}
 
@@ -81,14 +94,32 @@ export default async function GroupDetailPage(props: PageProps<"/grupos/[id]">) 
                   <p className="font-body text-sm text-on-surface-variant">{member.user.zone}</p>
                 )}
               </div>
-              {isOwner && member.user.id !== session.userId && (
-                <MatchActionForm
-                  action={removeGroupMember}
-                  hiddenFields={{ groupId: group.id, userId: member.user.id }}
-                  label="Quitar"
-                  className="shrink-0 rounded-lg border border-outline-variant px-3 py-1.5 font-label text-xs font-bold text-on-surface active:scale-95"
-                />
-              )}
+              <div className="flex shrink-0 items-center gap-2">
+                {member.user.id !== session.userId && member.friendRelation === "ninguna" && (
+                  <AddFriendButton userId={member.user.id} />
+                )}
+                {member.friendRelation === "pendiente_enviada" && (
+                  <span className="font-label text-xs font-bold text-on-surface-variant">
+                    Solicitud enviada
+                  </span>
+                )}
+                {member.friendRelation === "pendiente_recibida" && (
+                  <a
+                    href="/red"
+                    className="font-label text-xs font-bold text-primary-lime underline"
+                  >
+                    Te envió solicitud
+                  </a>
+                )}
+                {isOwner && member.user.id !== session.userId && (
+                  <MatchActionForm
+                    action={removeGroupMember}
+                    hiddenFields={{ groupId: group.id, userId: member.user.id }}
+                    label="Quitar"
+                    className="rounded-lg border border-outline-variant px-3 py-1.5 font-label text-xs font-bold text-on-surface active:scale-95"
+                  />
+                )}
+              </div>
             </li>
           ))}
         </ul>

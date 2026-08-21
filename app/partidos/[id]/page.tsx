@@ -23,8 +23,7 @@ import {
 import { ShareMatchButton } from "@/components/share-match-button";
 import { MatchActionForm } from "@/components/match-action-form";
 import { MatchVisibilitySwitch } from "@/components/matches/match-visibility-switch";
-import { InviteFriends } from "@/components/matches/invite-friends";
-import { InviteGroup } from "@/components/matches/invite-group";
+import { InvitePlayers } from "@/components/matches/invite-players";
 import { SPORT_LABELS } from "@/lib/matches/home";
 
 const VIBE_LABELS: Record<string, string> = {
@@ -274,10 +273,10 @@ export default async function MatchDetailPage(
           <h2 className="mb-3 font-display text-lg font-bold text-on-surface">
             Invitar jugadores
           </h2>
-          <InviteGroup matchId={match.id} groups={groups} />
-          <InviteFriends
+          <InvitePlayers
             matchId={match.id}
             friends={friends}
+            groups={groups}
             excludedUserIds={participants.map((p) => p.user_id)}
           />
           {!match.is_public && (

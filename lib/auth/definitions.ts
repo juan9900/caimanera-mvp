@@ -42,6 +42,45 @@ export type LoginFormState =
     }
   | undefined;
 
+export const ForgotPasswordSchema = z.object({
+  email: z.email({ error: "Ingresa un email válido." }).trim(),
+});
+
+export type ForgotPasswordState =
+  | {
+      errors?: {
+        email?: string[];
+      };
+      message?: string;
+      /** True once the reset email was requested — the form swaps to a confirmation message. Always set on success, regardless of whether the email is actually registered (avoids leaking account existence). */
+      success?: boolean;
+    }
+  | undefined;
+
+export const ResetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, { error: "Debe tener al menos 8 caracteres." })
+      .regex(/[a-zA-Z]/, { error: "Debe contener al menos una letra." })
+      .regex(/[0-9]/, { error: "Debe contener al menos un número." }),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    error: "Las contraseñas no coinciden.",
+    path: ["confirmPassword"],
+  });
+
+export type ResetPasswordState =
+  | {
+      errors?: {
+        password?: string[];
+        confirmPassword?: string[];
+      };
+      message?: string;
+    }
+  | undefined;
+
 export const SPORT_OPTIONS = SPORT_CATALOG_KEYS;
 
 export const NOTIFICATION_SCOPE_OPTIONS = ["red", "amigos", "canchas"] as const;

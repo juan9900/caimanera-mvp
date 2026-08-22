@@ -4,8 +4,12 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import {
+  ForgotPasswordSchema,
+  type ForgotPasswordState,
   LoginFormSchema,
   type LoginFormState,
+  ResetPasswordSchema,
+  type ResetPasswordState,
   SignupFormSchema,
   type SignupFormState,
 } from "@/lib/auth/definitions";
@@ -84,6 +88,59 @@ export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+export async function requestPasswordReset(
+  _state: ForgotPasswordState,
+  formData: FormData
+): Promise<ForgotPasswordState> {
+  const validatedFields = ForgotPasswordSchema.safeParse({
+    email: formData.get("email"),
+  });
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+
+  const { email } = validatedFields.data;
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: origin ? `${origin}/auth/confirm?next=/restablecer` : undefined,
+  });
+
+  // Always report success regardless of whether the email is registered —
+  // otherwise this endpoint becomes an account-existence oracle.
+  return {
+    success: true,
+    message: "Si el email está registrado, te enviamos un enlace para restablecer tu contraseña.",
+  };
+}
+
+export async function updatePassword(
+  _state: ResetPasswordState,
+  formData: FormData
+): Promise<ResetPasswordState> {
+  const validatedFields = ResetPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+
+  const { password } = validatedFields.data;
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { message: translateAuthError(error.message) };
+  }
+
+  redirect("/");
 }
 
 function translateAuthError(message: string): string {

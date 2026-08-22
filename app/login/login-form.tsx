@@ -38,6 +38,11 @@ export function LoginForm({ next }: { next?: string } = {}) {
         {state?.errors?.password && (
           <p className="mt-1 font-body text-sm text-dark-error">{state.errors.password[0]}</p>
         )}
+        <p className="mt-1 text-right">
+          <Link href="/recuperar" className="font-body text-sm text-primary-lime underline">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </p>
       </div>
 
       {state?.message && <p className="font-body text-sm text-dark-error">{state.message}</p>}

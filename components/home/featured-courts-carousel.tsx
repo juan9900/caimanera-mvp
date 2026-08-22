@@ -9,9 +9,8 @@ import type { FeaturedCourt } from "@/lib/matches/home";
 import { AmenityIcons } from "@/components/courts/amenity-icons";
 import { RatingStars } from "@/components/courts/rating-stars";
 
-// TODO: swap for a dedicated sales inbox/WhatsApp once there's one.
-const SPONSOR_INQUIRY_MAILTO =
-  "mailto:juanluislauretta@gmail.com?subject=Quiero anunciar mi cancha";
+const SPONSOR_INQUIRY_WHATSAPP =
+  "https://wa.me/584246023604?text=Quiero%20anunciar%20mi%20cancha%20en%20Kancha";
 
 function isPromoActive(court: {
   promo_text: string | null;
@@ -90,7 +89,7 @@ function SponsoredCourtCard({
           {promo ??
             (openMatchCount > 0
               ? `${openMatchCount} ${openMatchCount === 1 ? "partido abierto" : "partidos abiertos"} ahora mismo`
-              : "Cancha destacada")}
+              : "Cancha oficial")}
         </p>
         <AmenityIcons
           amenities={court.amenities}
@@ -107,7 +106,9 @@ function SponsoredCourtCard({
 function SponsorInquiryCard() {
   return (
     <a
-      href={SPONSOR_INQUIRY_MAILTO}
+      href={SPONSOR_INQUIRY_WHATSAPP}
+      target="_blank"
+      rel="noopener noreferrer"
       className="flex w-[85vw] max-w-[320px] shrink-0 snap-center flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-secondary-container bg-secondary-container/20 p-4 text-center"
     >
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container">
@@ -144,7 +145,7 @@ export function FeaturedCourtsCarousel({
   return (
     <section className="flex flex-col gap-3 pt-2">
       <h2 className="px-4 font-display text-xl font-bold text-on-surface">
-        Canchas Destacadas
+        Canchas Oficiales
       </h2>
       <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pl-4 pb-1">
         {courts.map((featured) => (

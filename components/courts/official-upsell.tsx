@@ -37,7 +37,7 @@ export function OfficialUpsell() {
         ))}
       </ul>
       <a
-        href="https://wa.me/message"
+        href="https://wa.me/584246023604?text=Quiero%20ser%20partner%20oficial%20en%20Kancha"
         target="_blank"
         rel="noopener noreferrer"
         className="mt-4 inline-flex rounded-lg bg-primary-lime px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-on-primary active:scale-[0.98]"

@@ -13,7 +13,7 @@ export default async function SignupPage({
       <SiteLogo className="mb-8 h-14 w-auto" priority />
       <h1 className="mb-2 font-display text-2xl font-bold">Crear cuenta</h1>
       <p className="mb-8 max-w-sm text-center font-body text-on-surface-variant">
-        Necesitás un código de invitación de alguien de la red para unirte.
+        Necesitas un código de invitación de alguien de la red para unirte.
       </p>
       <SignupForm defaultInviteCode={ref} />
     </div>

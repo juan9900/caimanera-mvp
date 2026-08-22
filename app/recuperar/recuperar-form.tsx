@@ -27,6 +27,9 @@ export function RecuperarForm() {
         <h2 className="font-display text-xl font-bold">Revisa tu email</h2>
         <p className="font-body text-sm text-on-surface-variant">{state.message}</p>
         <p className="font-body text-sm text-on-surface-variant">
+          Si no lo ves, revisa también la carpeta de spam.
+        </p>
+        <p className="font-body text-sm text-on-surface-variant">
           <Link href="/login" className="text-primary-lime underline">
             Volver a iniciar sesión
           </Link>

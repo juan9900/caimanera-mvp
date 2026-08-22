@@ -27,6 +27,9 @@ export function SignupForm({ defaultInviteCode }: { defaultInviteCode?: string }
         <h2 className="font-display text-xl font-bold">Revisa tu email</h2>
         <p className="font-body text-sm text-on-surface-variant">{state.message}</p>
         <p className="font-body text-sm text-on-surface-variant">
+          Si no lo ves, revisa también la carpeta de spam.
+        </p>
+        <p className="font-body text-sm text-on-surface-variant">
           ¿Ya confirmaste?{" "}
           <Link href="/login" className="text-primary-lime underline">
             Inicia sesión

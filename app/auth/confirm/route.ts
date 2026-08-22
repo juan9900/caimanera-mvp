@@ -5,25 +5,35 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * Landing target for Supabase auth emails (signup confirmation, password
- * recovery, etc). Exchanges the `token_hash` for a session server-side so
- * the SSR cookie client (lib/supabase/server.ts) sees it on the next
- * request — the hash-fragment tokens from Supabase's default hosted
- * `/auth/v1/verify` redirect never reach the server, so this route must be
- * the target configured in the Supabase email templates (see
- * `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup`).
+ * recovery, etc), set via `emailRedirectTo` in `app/actions/auth.ts`.
+ *
+ * The project has no custom SMTP configured, so the email templates
+ * (including "Confirm signup") can't be edited in the dashboard and still
+ * use the default `{{ .ConfirmationURL }}` link. That link hits Supabase's
+ * hosted `/auth/v1/verify` endpoint, which verifies the token server-side
+ * and then redirects the browser to `redirect_to` — since the client here
+ * uses the default `flowType: "pkce"` (see `lib/supabase/server.ts`), that
+ * redirect carries a `?code=` param instead of hash-fragment tokens, so a
+ * plain Route Handler can pick it up and exchange it for a session that
+ * lands in cookies (`exchangeCodeForSession`). `token_hash`/`type` are kept
+ * as a fallback for the OTP-link pattern, in case the email template is
+ * ever customized to use `{{ .TokenHash }}` directly (requires SMTP).
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+  const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/onboarding";
 
-  if (tokenHash && type) {
-    const supabase = await createClient();
+  const supabase = await createClient();
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) redirect(next);
+  } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-    if (!error) {
-      redirect(next);
-    }
+    if (!error) redirect(next);
   }
 
   redirect("/login?error=confirmacion");

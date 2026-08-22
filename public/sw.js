@@ -9,7 +9,7 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let payload = { title: "Caimanera", body: "" };
+  let payload = { title: "Kancha", body: "" };
   try {
     payload = event.data.json();
   } catch {
@@ -17,7 +17,7 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title ?? "Caimanera", {
+    self.registration.showNotification(payload.title ?? "Kancha", {
       body: payload.body ?? "",
       icon: "/icons/icon-192.png",
       data: { url: payload.url ?? "/" },

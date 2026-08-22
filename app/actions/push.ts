@@ -72,7 +72,7 @@ export async function sendTestNotification(): Promise<{ message: string }> {
   }
 
   await sendPushToSubscriptions(data, {
-    title: "Caimanera",
+    title: "Kancha",
     body: "Notificación de prueba: todo funciona.",
     url: "/",
   });

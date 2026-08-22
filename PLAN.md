@@ -1,4 +1,4 @@
-# Caimanera — Plan de desarrollo del MVP
+# Kancha — Plan de desarrollo del MVP
 
 Producto: red cerrada por invitación para armar caimaneras (partidos pickup de fútbol/tenis) en Maracaibo. Se entra por invitación de otro usuario, se arman partidos en canchas reales y la gente de tu red confirma cupo.
 

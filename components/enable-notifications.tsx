@@ -83,7 +83,7 @@ export function EnableNotifications({
       <p className="font-body text-xs text-on-surface-variant">
         Para recibir notificaciones en iPhone: tocá{" "}
         <span aria-hidden="true">Compartir ⬆️</span> en Safari y elegí{" "}
-        <strong>&quot;Añadir a pantalla de inicio&quot;</strong>. Después abrí Caimanera
+        <strong>&quot;Añadir a pantalla de inicio&quot;</strong>. Después abrí Kancha
         desde ese ícono y activá las notificaciones ahí.
       </p>
     );

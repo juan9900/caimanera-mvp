@@ -208,7 +208,7 @@ export function CourtSponsorshipFields({
           <input
             id="promoCode"
             name="promoCode"
-            placeholder="CAIMANERA2X1"
+            placeholder="KANCHA2X1"
             defaultValue={defaultValues?.promoCode ?? ""}
             className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
           />

@@ -36,7 +36,7 @@ type TourStep = {
 const STEPS: TourStep[] = [
   {
     target: null,
-    title: "¡Bienvenido a Caimanera! \u{1F44B}",
+    title: "¡Bienvenido a Kancha! \u{1F44B}",
     body: "Te muestro lo esencial en 20 segundos.",
   },
   {
@@ -67,7 +67,7 @@ const STEPS: TourStep[] = [
   {
     target: null,
     title: "Guárdala en tu pantalla de inicio",
-    body: "Agrega Caimanera a la pantalla de inicio de tu teléfono para entrar con un toque, como una app. Si necesitas ayuda, al final del inicio tienes una guía paso a paso.",
+    body: "Agrega Kancha a la pantalla de inicio de tu teléfono para entrar con un toque, como una app. Si necesitas ayuda, al final del inicio tienes una guía paso a paso.",
   },
   {
     target: null,

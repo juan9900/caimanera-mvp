@@ -32,10 +32,17 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const FAVICON_URL =
+  "https://res.cloudinary.com/mdnclientes/image/upload/v1787421446/Kancha/Isotipo_Kancha_vjiyru.webp";
+
 export const metadata: Metadata = {
-  title: "Caimanera",
+  title: "Kancha",
   description: "Consigue jugadores para tu caimanera de fútbol en Maracaibo",
   manifest: "/manifest.json",
+  icons: {
+    icon: FAVICON_URL,
+    apple: FAVICON_URL,
+  },
 };
 
 export const viewport: Viewport = {

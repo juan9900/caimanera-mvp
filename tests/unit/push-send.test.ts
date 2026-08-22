@@ -25,7 +25,7 @@ function stubAdminClient() {
 const SUB_A = { endpoint: "https://push.example/a", p256dh: "pa", auth: "aa" };
 const SUB_B = { endpoint: "https://push.example/b", p256dh: "pb", auth: "ab" };
 
-const PAYLOAD = { title: "Caimanera", body: "Faltan 2 jugadores", url: "/partidos/1" };
+const PAYLOAD = { title: "Kancha", body: "Faltan 2 jugadores", url: "/partidos/1" };
 
 describe("sendPushToSubscriptions", () => {
   const originalEnv = process.env;
@@ -40,7 +40,7 @@ describe("sendPushToSubscriptions", () => {
       ...originalEnv,
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: "public-key",
       VAPID_PRIVATE_KEY: "private-key",
-      VAPID_SUBJECT: "mailto:test@caimanera.app",
+      VAPID_SUBJECT: "mailto:test@kancha.app",
     };
   });
 

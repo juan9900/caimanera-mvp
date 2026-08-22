@@ -26,7 +26,7 @@ export function AddToHomeScreenGuide() {
           Acceso rápido
         </h3>
         <p className="mt-1.5 font-body text-xs text-on-surface-variant">
-          Agrega Caimanera a tu pantalla de inicio para entrar con un toque, como una app.
+          Agrega Kancha a tu pantalla de inicio para entrar con un toque, como una app.
         </p>
 
         <div className="mt-4 space-y-3">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Bell, ChevronDown, User as UserIcon, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -176,6 +176,7 @@ export function HeaderNav({
   logout?: (formData: FormData) => void | Promise<void>;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   // Realtime: refresh so the Social badge (friend requests) and the
   // notification bell stay accurate without a manual reload.
@@ -204,15 +205,19 @@ export function HeaderNav({
   if (!authed) {
     return (
       <nav className="flex items-center gap-4 text-sm">
-        <Link href="/login" className="text-on-surface-variant hover:text-primary-lime">
-          Iniciar sesión
-        </Link>
-        <Link
-          href="/signup"
-          className="rounded-md bg-primary-lime px-3 py-1.5 font-medium text-on-primary hover:brightness-95"
-        >
-          Crear cuenta
-        </Link>
+        {pathname !== "/login" && (
+          <Link href="/login" className="text-on-surface-variant hover:text-primary-lime">
+            Iniciar sesión
+          </Link>
+        )}
+        {pathname !== "/signup" && (
+          <Link
+            href="/signup"
+            className="rounded-md bg-primary-lime px-3 py-1.5 font-medium text-on-primary hover:brightness-95"
+          >
+            Crear cuenta
+          </Link>
+        )}
       </nav>
     );
   }

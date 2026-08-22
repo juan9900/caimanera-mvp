@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Megaphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -11,9 +12,15 @@ import { AmenityIcons } from "@/components/courts/amenity-icons";
 const SPONSOR_INQUIRY_MAILTO =
   "mailto:juanluislauretta@gmail.com?subject=Quiero anunciar mi cancha";
 
-function isPromoActive(court: { promo_text: string | null; promo_expires_at: string | null }): boolean {
+function isPromoActive(court: {
+  promo_text: string | null;
+  promo_expires_at: string | null;
+}): boolean {
   if (!court.promo_text) return false;
-  return court.promo_expires_at == null || new Date(court.promo_expires_at) > new Date();
+  return (
+    court.promo_expires_at == null ||
+    new Date(court.promo_expires_at) > new Date()
+  );
 }
 
 function logCourtEvent(courtId: string, type: string) {
@@ -41,7 +48,7 @@ function SponsoredCourtCard({
   distanceLabel,
 }: FeaturedCourt & { distanceLabel?: string }) {
   useImpressionOnce(court.id);
-  const image = court.photos?.[0] ?? court.logo_url ?? null;
+  const coverPhoto = court.photos?.[0] ?? null;
   const promo = isPromoActive(court) ? court.promo_text : null;
 
   return (
@@ -51,11 +58,26 @@ function SponsoredCourtCard({
       className="relative flex w-[85vw] max-w-[320px] shrink-0 snap-center flex-col overflow-hidden rounded-xl bg-surface-container shadow-md transition-transform active:scale-[0.98]"
     >
       <div
-        className="h-48 w-full bg-surface-variant bg-cover bg-center"
-        style={image ? { backgroundImage: `url(${image})` } : undefined}
-      />
+        className="relative h-48 w-full bg-surface-variant bg-cover bg-center"
+        style={
+          coverPhoto ? { backgroundImage: `url(${coverPhoto})` } : undefined
+        }
+      >
+        {court.logo_url && (
+          <Image
+            src={court.logo_url}
+            alt=""
+            width={200}
+            height={200}
+            unoptimized
+            className="absolute left-4 top-4 h-[200px] w-[200px] object-contain object-top drop-shadow-md"
+          />
+        )}
+      </div>
       <div className="p-4">
-        <p className="truncate font-display text-lg font-bold text-on-surface">{court.name}</p>
+        <p className="truncate font-display text-lg font-bold text-on-surface">
+          {court.name}
+        </p>
         <p className="mt-1 flex items-center gap-1 truncate font-label text-xs text-on-surface-variant">
           <MapPin aria-hidden size={14} />
           {distanceLabel ? `${distanceLabel} · Maracaibo` : "Maracaibo"}
@@ -66,7 +88,12 @@ function SponsoredCourtCard({
               ? `${openMatchCount} ${openMatchCount === 1 ? "partido abierto" : "partidos abiertos"} ahora mismo`
               : "Cancha destacada")}
         </p>
-        <AmenityIcons amenities={court.amenities} size="sm" tone="dark" className="mt-3" />
+        <AmenityIcons
+          amenities={court.amenities}
+          size="sm"
+          tone="dark"
+          className="mt-3"
+        />
       </div>
     </Link>
   );
@@ -83,7 +110,9 @@ function SponsorInquiryCard() {
         <Megaphone aria-hidden size={24} />
       </span>
       <div>
-        <p className="font-display text-lg font-bold text-on-secondary-container">¿Tienes una cancha?</p>
+        <p className="font-display text-lg font-bold text-on-secondary-container">
+          ¿Tienes una cancha?
+        </p>
         <p className="mt-1 font-body text-sm text-on-surface-variant">
           Anúnciala aquí y llega a cientos de jugadores cada semana.
         </p>
@@ -110,7 +139,9 @@ export function FeaturedCourtsCarousel({
 }) {
   return (
     <section className="flex flex-col gap-3 pt-2">
-      <h2 className="px-4 font-display text-xl font-bold text-on-surface">Canchas Destacadas</h2>
+      <h2 className="px-4 font-display text-xl font-bold text-on-surface">
+        Canchas Destacadas
+      </h2>
       <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pl-4 pb-1">
         {courts.map((featured) => (
           <SponsoredCourtCard

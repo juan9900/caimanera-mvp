@@ -3,8 +3,6 @@ import Link from "next/link";
 import {
   verifySession,
   getCurrentUserProfile,
-  getMyInvitees,
-  getMyInviter,
   getMyFriends,
   getIncomingFriendRequests,
   getOutgoingFriendRequests,
@@ -20,30 +18,37 @@ import {
   removeFriend,
 } from "@/app/actions/friends";
 
-export default async function RedPage() {
+export default async function AmigosPage() {
   const session = await verifySession();
   if (!session) redirect("/login");
 
   const profile = await getCurrentUserProfile();
   if (!profile?.name) redirect("/onboarding");
 
-  const [invitees, inviter, friends, incomingRequests, outgoingRequests, groups] =
-    await Promise.all([
-      getMyInvitees(),
-      getMyInviter(),
-      getMyFriends(),
-      getIncomingFriendRequests(),
-      getOutgoingFriendRequests(),
-      getMyGroups(),
-    ]);
+  const [friends, incomingRequests, outgoingRequests, groups] = await Promise.all([
+    getMyFriends(),
+    getIncomingFriendRequests(),
+    getOutgoingFriendRequests(),
+    getMyGroups(),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
-      <h1 className="mb-2 font-display text-2xl font-bold">Mi red</h1>
+      <h1 className="mb-2 font-display text-2xl font-bold">Amigos</h1>
       <p className="mb-6 font-body text-on-surface-variant">
-        Cuando pides unirte a un partido, el organizador ve si eres de su red
-        directa o externo — pero siempre debe aprobar tu solicitud.
+        Cuando pides unirte a un partido, el organizador ve si eres amigo suyo
+        o externo — pero siempre debe aprobar tu solicitud.
       </p>
+
+      <section className="mb-8">
+        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
+          Tu link de invitación
+        </h2>
+        <p className="mb-2 font-body text-sm text-on-surface-variant">
+          Es fijo y puedes compartirlo con quien quieras, las veces que quieras.
+        </p>
+        <CopyInviteLink path={`/signup?ref=${profile.referral_code}`} />
+      </section>
 
       <section className="mb-8">
         <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
@@ -177,48 +182,6 @@ export default async function RedPage() {
         )}
       </section>
 
-      <section className="mb-8">
-        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
-          Quién te invitó
-        </h2>
-        <div className="rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
-          {inviter ? (
-            <p className="font-body text-on-surface">{inviter.name ?? "Jugador"}</p>
-          ) : (
-            <p className="font-body text-sm text-on-surface-variant">
-              Entraste como fundador, sin invitación.
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section className="mb-8">
-        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
-          Tu link de invitación
-        </h2>
-        <p className="mb-2 font-body text-sm text-on-surface-variant">
-          Es fijo y podés compartirlo con quien quieras, las veces que quieras.
-        </p>
-        <CopyInviteLink path={`/signup?ref=${profile.referral_code}`} />
-      </section>
-
-      <section>
-        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
-          Quién invitaste ({invitees.length})
-        </h2>
-        <ul className="flex flex-col gap-2">
-          {invitees.length === 0 && (
-            <li className="rounded-xl border border-dashed border-surface-variant px-4 py-6 text-center font-body text-sm text-on-surface-variant">
-              Todavía no invitaste a nadie de tu red directa.
-            </li>
-          )}
-          {invitees.map((user) => (
-            <li key={user.id} className="rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
-              <p className="font-body text-on-surface">{user.name ?? "Jugador"}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
     </div>
   );
 }

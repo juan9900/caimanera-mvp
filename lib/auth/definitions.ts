@@ -22,6 +22,8 @@ export type SignupFormState =
         password?: string[];
       };
       message?: string;
+      /** True once `signUp` succeeded and Supabase requires email confirmation — the form swaps to a confirmation message instead of showing the inputs again. */
+      success?: boolean;
     }
   | undefined;
 

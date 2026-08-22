@@ -7,6 +7,35 @@ import { signup } from "@/app/actions/auth";
 export function SignupForm({ defaultInviteCode }: { defaultInviteCode?: string }) {
   const [state, action, pending] = useActionState(signup, undefined);
 
+  if (state?.success) {
+    return (
+      <div className="w-full max-w-sm space-y-4 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-lime/15">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-7 w-7 text-primary-lime"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M4 6h16v12H4z" />
+            <path d="m4 7 8 6 8-6" />
+          </svg>
+        </div>
+        <h2 className="font-display text-xl font-bold">Revisa tu email</h2>
+        <p className="font-body text-sm text-on-surface-variant">{state.message}</p>
+        <p className="font-body text-sm text-on-surface-variant">
+          ¿Ya confirmaste?{" "}
+          <Link href="/login" className="text-primary-lime underline">
+            Inicia sesión
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form action={action} className="w-full max-w-sm space-y-4">
       <div>

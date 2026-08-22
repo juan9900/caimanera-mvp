@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import {
   LoginFormSchema,
@@ -25,11 +26,15 @@ export async function signup(
 
   const { inviteCode, email, password } = validatedFields.data;
   const supabase = await createClient();
+  const origin = (await headers()).get("origin");
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { invite_code: inviteCode } },
+    options: {
+      data: { invite_code: inviteCode },
+      emailRedirectTo: origin ? `${origin}/auth/confirm?next=/onboarding` : undefined,
+    },
   });
 
   if (error) {
@@ -38,6 +43,7 @@ export async function signup(
 
   if (!data.session) {
     return {
+      success: true,
       message: "Revisa tu email para confirmar la cuenta antes de continuar.",
     };
   }

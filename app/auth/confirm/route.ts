@@ -31,6 +31,15 @@ export async function GET(request: NextRequest) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) redirect(next);
+    // Supabase's /verify already confirmed the email (or validated the
+    // recovery token) before redirecting here with `code` — that part
+    // succeeded regardless of this exchange. A failure at this step means
+    // the `code_verifier` cookie from the browser that started the flow
+    // isn't present (most commonly: the email link was opened in a
+    // different browser/app than the one used to sign up), not that the
+    // link itself was invalid or expired — so this doesn't get the
+    // "invalid or expired" message below, just a plain redirect to login.
+    redirect("/login");
   } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) redirect(next);

@@ -39,6 +39,7 @@ function SocialMenu({ friendRequestCount }: { friendRequestCount: number }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        data-tour="social"
         className="flex items-center text-on-surface-variant hover:text-primary-lime"
         aria-haspopup="menu"
         aria-expanded={open}

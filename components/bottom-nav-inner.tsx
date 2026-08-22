@@ -9,13 +9,13 @@ import { createClient } from "@/lib/supabase/client";
 const REALTIME_REFRESH_DEBOUNCE_MS = 800;
 
 const LEFT_TABS = [
-  { href: "/", label: "Inicio", Icon: Compass },
-  { href: "/partidos", label: "Partidos", Icon: Goal },
+  { href: "/", label: "Inicio", Icon: Compass, dataTour: undefined },
+  { href: "/partidos", label: "Partidos", Icon: Goal, dataTour: "partidos" },
 ] as const;
 
 const RIGHT_TABS = [
-  { href: "/canchas", label: "Canchas", Icon: MapPin },
-  { href: "/invitaciones", label: "Invitaciones", Icon: Mail },
+  { href: "/canchas", label: "Canchas", Icon: MapPin, dataTour: "canchas" },
+  { href: "/invitaciones", label: "Invitaciones", Icon: Mail, dataTour: "invitaciones" },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -29,16 +29,19 @@ function NavTab({
   Icon,
   active,
   badgeCount,
+  dataTour,
 }: {
   href: string;
   label: string;
   Icon: typeof Compass;
   active: boolean;
   badgeCount?: number;
+  dataTour?: string;
 }) {
   return (
     <Link
       href={href}
+      data-tour={dataTour}
       className={`flex w-16 flex-col items-center gap-1 whitespace-nowrap transition-transform active:scale-95 ${
         active ? "text-primary-lime" : "text-on-surface-variant"
       }`}
@@ -91,21 +94,29 @@ export function BottomNavInner({ invitationCount }: { invitationCount: number })
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-outline-variant/50 bg-surface-container/90 pb-safe backdrop-blur-xl">
       <div className="relative flex h-20 items-center justify-between px-4">
-        {LEFT_TABS.map(({ href, label, Icon }) => (
-          <NavTab key={href} href={href} label={label} Icon={Icon} active={isActive(pathname, href)} />
+        {LEFT_TABS.map(({ href, label, Icon, dataTour }) => (
+          <NavTab
+            key={href}
+            href={href}
+            label={label}
+            Icon={Icon}
+            active={isActive(pathname, href)}
+            dataTour={dataTour}
+          />
         ))}
 
         <div className="-mt-10 px-2">
           <Link
             href="/partidos/nuevo"
             aria-label="Crear partido"
+            data-tour="crear"
             className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-lime text-on-primary shadow-md transition-transform active:scale-90"
           >
             <Plus aria-hidden size={32} strokeWidth={2.25} />
           </Link>
         </div>
 
-        {RIGHT_TABS.map(({ href, label, Icon }) => (
+        {RIGHT_TABS.map(({ href, label, Icon, dataTour }) => (
           <NavTab
             key={href}
             href={href}
@@ -113,6 +124,7 @@ export function BottomNavInner({ invitationCount }: { invitationCount: number })
             Icon={Icon}
             active={isActive(pathname, href)}
             badgeCount={href === "/invitaciones" ? invitationCount : undefined}
+            dataTour={dataTour}
           />
         ))}
       </div>

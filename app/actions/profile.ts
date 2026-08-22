@@ -55,6 +55,23 @@ export async function completeOnboarding(
   redirect("/");
 }
 
+/** Marks the interactive home tour as seen, so it doesn't run again. */
+export async function completeOnboardingTour(): Promise<{ message?: string }> {
+  const session = await requireSession();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("users")
+    .update({ onboarding_tour_completed: true })
+    .eq("id", session.userId);
+
+  if (error) {
+    return { message: "No se pudo guardar el progreso del tutorial." };
+  }
+
+  return {};
+}
+
 /** Updates the current user's notification audience preferences. */
 export async function updateNotificationScopes(
   scopes: string[]

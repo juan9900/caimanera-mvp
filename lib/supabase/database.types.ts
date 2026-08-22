@@ -476,6 +476,7 @@ export type Database = {
           location_lng: number | null
           name: string | null
           notification_scopes: string[]
+          onboarding_tour_completed: boolean
           phone: string | null
           photo_url: string | null
           referral_code: string
@@ -493,6 +494,7 @@ export type Database = {
           location_lng?: number | null
           name?: string | null
           notification_scopes?: string[]
+          onboarding_tour_completed?: boolean
           phone?: string | null
           photo_url?: string | null
           referral_code?: string
@@ -510,6 +512,7 @@ export type Database = {
           location_lng?: number | null
           name?: string | null
           notification_scopes?: string[]
+          onboarding_tour_completed?: boolean
           phone?: string | null
           photo_url?: string | null
           referral_code?: string

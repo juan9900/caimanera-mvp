@@ -37,6 +37,7 @@ export default async function Home() {
       allCourts={allCourts}
       userLocation={userLocation}
       preferredSports={profile.sport_preferences}
+      startTour={!profile.onboarding_tour_completed}
     />
   );
 }

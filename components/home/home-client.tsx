@@ -21,6 +21,7 @@ import { NearbyMapCard } from "@/components/home/nearby-map-card";
 import { InvitationsSection } from "@/components/home/invitations-section";
 import { FriendsMatches } from "@/components/home/friends-matches";
 import { NeededMatches } from "@/components/home/needed-matches";
+import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
 
 const REALTIME_REFRESH_DEBOUNCE_MS = 800;
 
@@ -33,6 +34,7 @@ export function HomeClient({
   allCourts,
   userLocation,
   preferredSports,
+  startTour,
 }: {
   matches: HomeMatch[];
   friendsMatches: HomeMatch[];
@@ -41,6 +43,7 @@ export function HomeClient({
   allCourts: Court[];
   userLocation: UserLocation | null;
   preferredSports?: string[];
+  startTour?: boolean;
 }) {
   const router = useRouter();
   const [sportFilter, setSportFilter] = useState<string[]>([]);
@@ -154,6 +157,8 @@ export function HomeClient({
         sportFilter={sportFilter}
         onToggleSport={toggleSport}
       />
+
+      <OnboardingTour run={!!startTour} />
     </div>
   );
 }

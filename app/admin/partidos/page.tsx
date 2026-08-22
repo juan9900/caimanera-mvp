@@ -57,6 +57,7 @@ export default async function AdminPartidosPage() {
                     {new Date(match.datetime).toLocaleString("es-VE", {
                       dateStyle: "medium",
                       timeStyle: "short",
+                      timeZone: "America/Caracas",
                     })}{" "}
                     · organiza {match.organizer?.name ?? "alguien"}
                   </p>

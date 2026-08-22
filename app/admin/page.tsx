@@ -80,6 +80,7 @@ export default async function AdminPage() {
                   {new Date(event.createdAt).toLocaleString("es-VE", {
                     dateStyle: "medium",
                     timeStyle: "short",
+                    timeZone: "America/Caracas",
                   })}
                 </p>
               </li>

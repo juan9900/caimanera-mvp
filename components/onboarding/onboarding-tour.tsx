@@ -61,8 +61,13 @@ const STEPS: TourStep[] = [
   },
   {
     target: "social",
-    title: "Tu red",
+    title: "Amigos",
     body: "Agrega amigos y crea grupos para invitarlos a tus partidos de un toque.",
+  },
+  {
+    target: null,
+    title: "Guárdala en tu pantalla de inicio",
+    body: "Agrega Caimanera a la pantalla de inicio de tu teléfono para entrar con un toque, como una app. Si necesitas ayuda, al final del inicio tienes una guía paso a paso.",
   },
   {
     target: null,

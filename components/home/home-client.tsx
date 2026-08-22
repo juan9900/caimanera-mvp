@@ -21,7 +21,9 @@ import { NearbyMapCard } from "@/components/home/nearby-map-card";
 import { InvitationsSection } from "@/components/home/invitations-section";
 import { FriendsMatches } from "@/components/home/friends-matches";
 import { NeededMatches } from "@/components/home/needed-matches";
+import { AddToHomeScreenGuide } from "@/components/home/add-to-home-screen-guide";
 import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
+import { LocationSelector } from "@/components/location/location-selector";
 
 const REALTIME_REFRESH_DEBOUNCE_MS = 800;
 
@@ -136,6 +138,10 @@ export function HomeClient({
 
   return (
     <div className="flex flex-1 flex-col gap-8 bg-surface pb-8 text-on-surface">
+      <div className="px-4 pt-4">
+        <LocationSelector authed initialLabel={userLocation?.label ?? null} />
+      </div>
+
       <FeaturedCourtsCarousel courts={featuredCourts} distanceByCourtId={distanceByCourtId} />
 
       <NearbyMapCard courts={allCourts} userLocation={userLocation} preferredSports={preferredSports} />
@@ -157,6 +163,8 @@ export function HomeClient({
         sportFilter={sportFilter}
         onToggleSport={toggleSport}
       />
+
+      <AddToHomeScreenGuide />
 
       <OnboardingTour run={!!startTour} />
     </div>

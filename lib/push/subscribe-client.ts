@@ -20,7 +20,7 @@ export function isPushSupported(): boolean {
 }
 
 /** True when running as an installed PWA (standalone display mode). */
-function isStandalone(): boolean {
+export function isStandalone(): boolean {
   return (
     typeof window !== "undefined" &&
     (window.matchMedia?.("(display-mode: standalone)").matches ||

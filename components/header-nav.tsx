@@ -206,7 +206,14 @@ export function HeaderNav({
     return (
       <nav className="flex items-center gap-4 text-sm">
         {pathname !== "/login" && (
-          <Link href="/login" className="text-on-surface-variant hover:text-primary-lime">
+          <Link
+            href="/login"
+            className={
+              pathname === "/signup"
+                ? "rounded-md bg-primary-lime px-3 py-1.5 font-medium text-on-primary hover:brightness-95"
+                : "text-on-surface-variant hover:text-primary-lime"
+            }
+          >
             Iniciar sesión
           </Link>
         )}

@@ -1,11 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { signup } from "@/app/actions/auth";
 
 export function SignupForm({ defaultInviteCode }: { defaultInviteCode?: string }) {
   const [state, action, pending] = useActionState(signup, undefined);
+  // Controlled (not defaultValue) so a failed submit — e.g. invalid password —
+  // doesn't wipe the email the user already typed: React resets uncontrolled
+  // form fields after a form action runs, but leaves controlled ones alone.
+  const [email, setEmail] = useState("");
 
   if (state?.success) {
     return (
@@ -65,6 +69,8 @@ export function SignupForm({ defaultInviteCode }: { defaultInviteCode?: string }
           id="email"
           name="email"
           type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           className="mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface focus:border-primary-lime focus:outline-none"
         />
         {state?.errors?.email && (

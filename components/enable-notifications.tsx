@@ -81,10 +81,10 @@ export function EnableNotifications({
   if (status === "ios-install") {
     return (
       <p className="font-body text-xs text-on-surface-variant">
-        Para recibir notificaciones en iPhone: tocá{" "}
-        <span aria-hidden="true">Compartir ⬆️</span> en Safari y elegí{" "}
-        <strong>&quot;Añadir a pantalla de inicio&quot;</strong>. Después abrí Kancha
-        desde ese ícono y activá las notificaciones ahí.
+        Para recibir notificaciones en iPhone: toca{" "}
+        <span aria-hidden="true">Compartir ⬆️</span> en Safari y elige{" "}
+        <strong>&quot;Añadir a pantalla de inicio&quot;</strong>. Después abre Kancha
+        desde ese ícono y activa las notificaciones ahí.
       </p>
     );
   }

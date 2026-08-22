@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, User as UserIcon, Users } from "lucide-react";
+import { Bell, ChevronDown, User as UserIcon, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const REALTIME_REFRESH_DEBOUNCE_MS = 800;
@@ -27,6 +27,19 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, open: boolean
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [ref, open, close]);
+}
+
+function NotificationBell({ count }: { count: number }) {
+  return (
+    <Link
+      href="/notificaciones"
+      className="relative flex items-center text-on-surface-variant hover:text-primary-lime"
+      aria-label="Notificaciones"
+    >
+      <Bell aria-hidden size={20} />
+      <NavBadge count={count} />
+    </Link>
+  );
 }
 
 function SocialMenu({ friendRequestCount }: { friendRequestCount: number }) {
@@ -143,26 +156,29 @@ function AccountMenu({
 /**
  * Secondary header navigation — same on every screen size, and deliberately
  * does NOT duplicate the primary bottom tab bar (`components/bottom-nav-inner.tsx`,
- * which owns Inicio/Partidos/Crear/Canchas/Invitaciones). Only two entry
- * points live here: "Social" (Amigos + Grupos) and the account menu
- * (Perfil/Admin/Cerrar sesión).
+ * which owns Inicio/Partidos/Crear/Canchas/Invitaciones). Entry points here:
+ * the notification bell (`/notificaciones`), "Social" (Amigos + Grupos), and
+ * the account menu (Perfil/Admin/Cerrar sesión).
  */
 export function HeaderNav({
   authed,
   userLabel,
   isAdmin,
   friendRequestCount = 0,
+  unreadNotificationCount = 0,
   logout,
 }: {
   authed: boolean;
   userLabel?: string;
   isAdmin?: boolean;
   friendRequestCount?: number;
+  unreadNotificationCount?: number;
   logout?: (formData: FormData) => void | Promise<void>;
 }) {
   const router = useRouter();
 
-  // Realtime: refresh so the Social badge (friend requests) stays accurate.
+  // Realtime: refresh so the Social badge (friend requests) and the
+  // notification bell stay accurate without a manual reload.
   useEffect(() => {
     if (!authed) return;
 
@@ -176,6 +192,7 @@ export function HeaderNav({
     const channel = supabase
       .channel("header-nav-badges")
       .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, scheduleRefresh)
       .subscribe();
 
     return () => {
@@ -202,6 +219,7 @@ export function HeaderNav({
 
   return (
     <nav className="flex items-center gap-3 text-sm">
+      <NotificationBell count={unreadNotificationCount} />
       <SocialMenu friendRequestCount={friendRequestCount} />
       <AccountMenu userLabel={userLabel} isAdmin={isAdmin} logout={logout} />
     </nav>

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AUDIENCE_SCOPES } from "@/lib/push/definitions";
+import { persistNotifications, type NotificationType } from "@/lib/notifications/create";
 
 type Client = SupabaseClient<Database>;
 
@@ -147,6 +148,32 @@ export async function notifyUsers(
   payload: PushPayload
 ): Promise<void> {
   await sendPushToSubscriptions(await getSubscriptionsForUsers(supabase, userIds), payload);
+}
+
+/**
+ * Sends a push (as `notifyUsers` does) and, alongside it, saves the same
+ * event to the in-app notification feed (`lib/notifications/create.ts`).
+ * The pair is meant for every user-directed event — the push is the
+ * real-time nudge, the saved row is what a user who missed it (or never
+ * granted push permission) still gets to see in `/notificaciones`.
+ */
+export async function notifyAndPersist(
+  supabase: Client,
+  userIds: string[],
+  payload: PushPayload,
+  type: NotificationType,
+  actorId?: string
+): Promise<void> {
+  await Promise.all([
+    notifyUsers(supabase, userIds, payload),
+    persistNotifications(userIds, {
+      type,
+      title: payload.title,
+      body: payload.body,
+      url: payload.url,
+      actorId,
+    }),
+  ]);
 }
 
 /**

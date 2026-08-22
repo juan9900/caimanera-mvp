@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { SPORT_LABELS } from "@/lib/matches/home";
-import { notifyMatchAudience, notifyUsers } from "@/lib/push/send";
+import { notifyAndPersist, notifyMatchAudience } from "@/lib/push/send";
 
 type Client = SupabaseClient<Database>;
 
@@ -75,11 +75,16 @@ export async function notifyJoinRequest(
   organizerId: string,
   requesterName: string | null
 ): Promise<void> {
-  await notifyUsers(supabase, [organizerId], {
-    title: "Alguien quiere unirse a tu partido",
-    body: `${requesterName ?? "Un jugador"} pidió unirse. Entrá para aceptarlo o rechazarlo.`,
-    url: matchUrl(matchId),
-  });
+  await notifyAndPersist(
+    supabase,
+    [organizerId],
+    {
+      title: "Alguien quiere unirse a tu partido",
+      body: `${requesterName ?? "Un jugador"} pidió unirse. Entra para aceptarlo o rechazarlo.`,
+      url: matchUrl(matchId),
+    },
+    "join_request"
+  );
 }
 
 /** The organizer approved a pending join request. */
@@ -88,11 +93,16 @@ export async function notifyRequestApproved(
   matchId: string,
   userId: string
 ): Promise<void> {
-  await notifyUsers(supabase, [userId], {
-    title: "¡Estás dentro!",
-    body: "El organizador aceptó tu solicitud. Nos vemos en la cancha.",
-    url: matchUrl(matchId),
-  });
+  await notifyAndPersist(
+    supabase,
+    [userId],
+    {
+      title: "¡Estás dentro!",
+      body: "El organizador aceptó tu solicitud. Nos vemos en la cancha.",
+      url: matchUrl(matchId),
+    },
+    "request_approved"
+  );
 }
 
 /** An invitee accepted their invitation and is now confirmed — the organizer already
@@ -103,11 +113,16 @@ export async function notifyMatchJoined(
   organizerId: string,
   joinerName: string | null
 ): Promise<void> {
-  await notifyUsers(supabase, [organizerId], {
-    title: "Se sumó un jugador a tu partido",
-    body: `${joinerName ?? "Un jugador"} aceptó tu invitación y ya está confirmado.`,
-    url: matchUrl(matchId),
-  });
+  await notifyAndPersist(
+    supabase,
+    [organizerId],
+    {
+      title: "Se sumó un jugador a tu partido",
+      body: `${joinerName ?? "Un jugador"} aceptó tu invitación y ya está confirmado.`,
+      url: matchUrl(matchId),
+    },
+    "match_joined"
+  );
 }
 
 /** The organizer invited specific players. */
@@ -117,11 +132,16 @@ export async function notifyInvited(
   userIds: string[],
   organizerName: string | null
 ): Promise<void> {
-  await notifyUsers(supabase, userIds, {
-    title: "Te invitaron a una caimanera",
-    body: `${organizerName ?? "Un organizador"} te invitó a jugar. Entrá para aceptar.`,
-    url: matchUrl(matchId),
-  });
+  await notifyAndPersist(
+    supabase,
+    userIds,
+    {
+      title: "Te invitaron a una caimanera",
+      body: `${organizerName ?? "Un organizador"} te invitó a jugar. Entra para aceptar.`,
+      url: matchUrl(matchId),
+    },
+    "invited_match"
+  );
 }
 
 /** The organizer cancelled the match — everyone who was confirmed needs to know. */
@@ -132,11 +152,17 @@ export async function notifyMatchCancelled(
 ): Promise<void> {
   const userIds = await getConfirmedUserIds(supabase, matchId, organizerId);
 
-  await notifyUsers(supabase, userIds, {
-    title: "Se canceló un partido",
-    body: "El organizador canceló la caimanera en la que estabas confirmado.",
-    url: matchUrl(matchId),
-  });
+  await notifyAndPersist(
+    supabase,
+    userIds,
+    {
+      title: "Se canceló un partido",
+      body: "El organizador canceló la caimanera en la que estabas confirmado.",
+      url: matchUrl(matchId),
+    },
+    "match_cancelled",
+    organizerId
+  );
 }
 
 /** The organizer reopened an expired match to look for more players. */
@@ -147,11 +173,17 @@ export async function notifyMatchReopened(
 ): Promise<void> {
   const userIds = await getConfirmedUserIds(supabase, matchId, organizerId);
 
-  await notifyUsers(supabase, userIds, {
-    title: "Se reabrió un partido",
-    body: "El organizador reabrió la caimanera para buscar más jugadores.",
-    url: matchUrl(matchId),
-  });
+  await notifyAndPersist(
+    supabase,
+    userIds,
+    {
+      title: "Se reabrió un partido",
+      body: "El organizador reabrió la caimanera para buscar más jugadores.",
+      url: matchUrl(matchId),
+    },
+    "match_reopened",
+    organizerId
+  );
 }
 
 /**
@@ -171,12 +203,18 @@ export async function notifyMatchUpdated(
   const userIds = await getConfirmedUserIds(supabase, matchId, organizerId);
   if (userIds.length === 0) return;
 
-  await notifyUsers(supabase, userIds, {
-    title: "Cambió un partido",
-    body:
-      changes.length === 1
-        ? `El organizador actualizó: ${changes[0]}.`
-        : `El organizador actualizó: ${changes.join(", ")}.`,
-    url: matchUrl(matchId),
-  });
+  await notifyAndPersist(
+    supabase,
+    userIds,
+    {
+      title: "Cambió un partido",
+      body:
+        changes.length === 1
+          ? `El organizador actualizó: ${changes[0]}.`
+          : `El organizador actualizó: ${changes.join(", ")}.`,
+      url: matchUrl(matchId),
+    },
+    "match_updated",
+    organizerId
+  );
 }

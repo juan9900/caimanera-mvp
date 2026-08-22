@@ -73,7 +73,7 @@ export function SignupForm({ defaultInviteCode }: { defaultInviteCode?: string }
       </button>
 
       <p className="text-center font-body text-sm text-on-surface-variant">
-        ¿Ya tenés cuenta?{" "}
+        ¿Ya tienes cuenta?{" "}
         <Link href="/login" className="text-primary-lime underline">
           Inicia sesión
         </Link>

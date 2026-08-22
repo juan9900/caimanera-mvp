@@ -51,7 +51,7 @@ export function LoginForm({ next }: { next?: string } = {}) {
       </button>
 
       <p className="text-center font-body text-sm text-on-surface-variant">
-        ¿No tenés cuenta?{" "}
+        ¿No tienes cuenta?{" "}
         <Link href="/signup" className="text-primary-lime underline">
           Regístrate con invitación
         </Link>

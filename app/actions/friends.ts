@@ -1,12 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession, searchUsers, type UserSearchResult } from "@/lib/auth/dal";
+import {
+  getCurrentUserProfile,
+  requireSession,
+  searchUsers,
+  type UserSearchResult,
+} from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import {
   SendFriendRequestSchema,
   type FriendActionResult,
 } from "@/lib/friends/definitions";
+import { notifyFriendAccepted, notifyFriendRequest } from "@/lib/push/friend-notifications";
 
 /** Searches other users by name/phone for the "buscar y agregar" panel. */
 export async function searchUsersAction(query: string): Promise<UserSearchResult[]> {
@@ -43,6 +49,9 @@ export async function sendFriendRequest(formData: FormData): Promise<FriendActio
     return { message: "No se pudo enviar la solicitud. Intenta de nuevo." };
   }
 
+  const profile = await getCurrentUserProfile();
+  await notifyFriendRequest(supabase, addresseeId, profile?.name ?? null, session.userId);
+
   revalidatePath("/amigos");
 }
 
@@ -53,13 +62,25 @@ export async function acceptFriendRequest(formData: FormData): Promise<FriendAct
   if (typeof friendshipId !== "string") return;
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: friendship, error } = await supabase
     .from("friendships")
     .update({ status: "aceptada", responded_at: new Date().toISOString() })
     .eq("id", friendshipId)
-    .eq("addressee_id", session.userId);
+    .eq("addressee_id", session.userId)
+    .select("requester_id")
+    .maybeSingle();
 
   if (error) return { message: "No se pudo aceptar la solicitud. Intenta de nuevo." };
+
+  if (friendship) {
+    const profile = await getCurrentUserProfile();
+    await notifyFriendAccepted(
+      supabase,
+      friendship.requester_id,
+      profile?.name ?? null,
+      session.userId
+    );
+  }
 
   revalidatePath("/amigos");
 }

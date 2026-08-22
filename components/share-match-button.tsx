@@ -11,7 +11,7 @@ export function ShareMatchButton({ title, datetime }: ShareMatchButtonProps) {
       dateStyle: "medium",
       timeStyle: "short",
     });
-    const text = `${title}, ${when}. Sumate acá: ${window.location.href}`;
+    const text = `${title}, ${when}. Súmate aquí: ${window.location.href}`;
 
     if (navigator.share) {
       navigator.share({ title, text, url: window.location.href }).catch(() => {});

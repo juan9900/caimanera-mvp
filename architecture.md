@@ -45,7 +45,8 @@ app/
     friends.ts      enviar/aceptar/rechazar/cancelar solicitud de amistad, eliminar amigo, buscar usuarios
     groups.ts       crear/renombrar/eliminar grupo, invitar/responder invitación de grupo, salir/sacar miembro, unirse por link (rotar/canjear token), buscar usuarios para invitar a un grupo
     location.ts     buscar lugar (geocoding) y guardar la ubicación del usuario
-  (rutas)/          una carpeta por ruta, `page.tsx` server + a veces un `*-form.tsx` cliente al lado (incluye `invitaciones/`, la página de invitaciones a partidos y grupos; `grupos/`, `grupos/[id]/` y `grupos/unirse/[token]/`; `mapa/` el mapa full-screen de canchas — `canchas/` renderiza la misma `MapExperience` que `/mapa`)
+    notifications.ts  marcar notificaciones in-app como leídas (`markAllNotificationsRead`, `markNotificationRead`)
+  (rutas)/          una carpeta por ruta, `page.tsx` server + a veces un `*-form.tsx` cliente al lado (incluye `invitaciones/`, la página de invitaciones a partidos y grupos; `notificaciones/`, el centro de notificaciones in-app; `grupos/`, `grupos/[id]/` y `grupos/unirse/[token]/`; `mapa/` el mapa full-screen de canchas — `canchas/` renderiza la misma `MapExperience` que `/mapa`)
   admin/            panel simple (solo `is_admin`), sin nav propia — ve usuarios, partidos, canchas, métricas
   login/, signup/, onboarding/   flujo de auth y setup inicial de perfil
 
@@ -56,7 +57,9 @@ lib/
   matches/, courts/, push/, friends/, groups/
     definitions.ts  esquemas Zod + tipos de formulario por dominio
     home.ts, sort.ts, amenities.ts, sports.tsx   lógica de negocio pura (ordenar, filtrar, catálogo de deportes) — testeada en tests/unit. `sports.tsx` es el catálogo canónico de deportes (`SPORTS`/`getSport`/`SPORT_CATALOG_KEYS`): cada deporte tiene un `icon` (`IconSource` de `lib/icons/svg-icon.ts`) que se renderiza tanto como componente React (`SportIcon`) como string SVG para los pines del mapa (`renderIconSource`), así el chip y el pin son el mismo dibujo. `IconSource` es `{kind:"stroke", nodes, strokeWidth?}` (glifo 24x24 a mano estilo lucide — futsal, tenis de mesa y racquetball, sin equivalente real) o `{kind:"fill", viewBox, markup}` (silueta rellena tomada de un asset SVG externo, con el `fill` hardcodeado quitado para que `currentColor` se herede — fútbol, básquet, vóleibol, y el mismo glifo de pelota de tenis compartido por tenis/pádel/tenis de playa).
-    push/send.ts, push/match-notifications.ts, push/group-notifications.ts   envío Web Push (server-only) + copy/destinatarios por evento
+    push/send.ts, push/match-notifications.ts, push/group-notifications.ts, push/friend-notifications.ts   envío Web Push (server-only) + copy/destinatarios por evento; `send.ts` expone `notifyAndPersist` (push + fila in-app) además del `notifyUsers`/`notifyMatchAudience` de solo push
+  notifications/
+    create.ts       `persistNotifications` (server-only, admin client) — guarda la fila in-app en la tabla `notifications`, llamado desde `notifyAndPersist`
   supabase/
     server.ts       cliente Supabase para Server Components/Actions (cookies de next/headers)
     client.ts        cliente Supabase para Client Components (browser)
@@ -82,7 +85,8 @@ components/
   bottom-nav*.tsx   tab bar inferior — navegación PRIMARIA, igual en toda resolución (solo visible logueado): Inicio · Partidos · [+ Crear] · Canchas · Invitaciones (badge con conteo de invitaciones a partido+grupo, refrescado por realtime en match_participants/group_members)
   site-logo.tsx     wordmark de la app (`SiteLogo`, `next/image` `unoptimized` apuntando al asset de Cloudinary) — usado en el header y en `/login`
   site-header.tsx   header superior; monta el logo (`SiteLogo`, izquierda, linkea a `/`) y `HeaderNav` (derecha). El selector de ubicación ya no vive aquí, ver `location/` arriba
-  header-nav.tsx    navegación SECUNDARIA del header, igual en toda resolución — deliberadamente no duplica el tab bar: menú "Social" (Amigos + Grupos, badge de solicitudes de amistad, refrescado por realtime en friendships) y menú de cuenta (avatar con inicial → Perfil, Admin si `is_admin`, Cerrar sesión)
+  header-nav.tsx    navegación SECUNDARIA del header, igual en toda resolución — deliberadamente no duplica el tab bar: campana de notificaciones (→ `/notificaciones`, badge de no leídas, refrescado por realtime en `notifications`), menú "Social" (Amigos + Grupos, badge de solicitudes de amistad, refrescado por realtime en friendships) y menú de cuenta (avatar con inicial → Perfil, Admin si `is_admin`, Cerrar sesión)
+  notifications/notifications-list.tsx   feed de `/notificaciones` (client): ícono por tipo de evento, resalta no leídas, marca todo como leído al montar (`markAllNotificationsRead`), cada ítem enlaza al deep-link guardado en la notificación
   *-map*.tsx        mapas Leaflet (hay un wrapper "-inner" porque Leaflet no soporta SSR)
 
 docs/
@@ -97,9 +101,10 @@ docs/
 - `courts` — cancha. `is_official` distingue cancha "de verdad" (con ficha, fotos, aparece en explorador y en el home) de una ubicación disponible solo para elegir al crear partido. En la ficha de la cancha (`app/canchas/[id]/page.tsx`) `is_official` además gatea la UI: solo las oficiales muestran el hero de foto (`CourtHero`), WhatsApp/Reservar (`CourtContactActions`), la sección de comodidades (`AmenitiesShowcase`) y la galería de fotos — las no oficiales ven una versión mínima (nombre, mapa, rating, "Cómo llegar") + una tarjeta de upsell (`OfficialUpsell`) invitando a hacerse partner. `sponsored_until`/`sponsor_priority` son el nivel pago (destacado en home) y es un concepto aparte de `is_official` (una cancha oficial puede o no estar patrocinada; el badge "Patrocinado" en la ficha depende solo de `sponsored_until`). `sports` (array de claves de `lib/courts/sports.tsx`) determina qué deportes ofrece — se elige con checkboxes en el form de admin (`CourtSponsorshipFields`) — y los íconos del pin en el mapa (`buildCourtIcon`, ver arriba). `address` es texto libre mostrado en las tarjetas de `/mapa`. `schedule` es texto libre para la ficha de la cancha; `opens_at`/`closes_at` (hora) + `open_days` (array de días con la convención `Date.getDay()` de JS: 0=domingo..6=sábado) son el horario estructurado usado para calcular "abierto hoy" — ver `lib/courts/hours.ts`. Por ahora el badge de horario en el selector de crear partido solo se muestra para canchas `is_official` (hoy, Cantera — que ofrece fútbol, pádel y futsal). `rating_avg`/`rating_count` son un agregado desnormalizado mantenido por un trigger (`recompute_court_rating`) sobre `court_ratings` — se lee directo de `courts` (sin join) en todos los mapas y en la ficha de la cancha. Aplica tanto a canchas oficiales como no oficiales; en las tarjetas de `/mapa` el rating reemplaza al cuadro de imagen en las no oficiales (que nunca tienen fotos).
 - `court_ratings` — una fila por `(court_id, user_id)` (constraint único, permite upsert = "editar mi calificación"), `rating` entero 1-5. RLS: lectura abierta a autenticados, escritura solo de la fila propia (`user_id = auth.uid()`). Se califica desde la ficha de la cancha (`components/courts/rate-court.tsx` → `rateCourt` en `app/actions/ratings.ts`); el promedio/cantidad vive desnormalizado en `courts.rating_avg`/`rating_count` (ver arriba), no se lee esta tabla para mostrarlo.
 - `matches` — partido: cancha, deporte (`sport`, uno de `SPORT_CATALOG_KEYS` de `lib/courts/sports.tsx`; se elige al crear el partido con `SportChip` y solo se listan/muestran en el mapa las canchas cuyo `sports[]` incluye ese deporte), organizador, fecha, cupos, `status` (`abierto`/`completo`/`cancelado`/`vencido`), `visibility` (enum `match_visibility`: `publica`/`amigos`/`privada`) controla la **visibilidad Y cómo se llenan los cupos**: `publica` = aparece en el explorador/home (excepto para su propio organizador, ver `getOpenMatchesWithCourtGeo`) y cualquiera puede pedir unirse (`joinMatch`, sigue aprobación del organizador) — el organizador **también** puede invitar directamente; `amigos` = no aparece en `/partidos` ni en el explorador público, pero sí en la sección "De tus amigos" del home (`getFriendsMatches` en `lib/auth/dal.ts`) para cada amigo directo del organizador, quien puede pedir unirse igual que en una pública; `privada` = no aparece en ningún listado, ni siquiera para amigos — no hay "pedir unirse", el organizador solo puede **invitar** explícitamente (`inviteToMatch`, ver abajo). En los tres casos, si al partido le siguen faltando cupos y no es `publica`, el detalle le sugiere al organizador hacerlo público (reutiliza `setMatchVisibility`) en vez de ofrecer un canal de notificación por audiencia. La lectura de `amigos`/`privada` fuera de esos canales ya es posible por la RLS de `SELECT` de `matches` (permite leer cualquier `status = "abierto"` sin importar `visibility`), pero el filtrado por nivel vive en la capa de app (DAL), no en RLS. **Editar (`/partidos/[id]/editar`, `updateMatch`):** el organizador puede corregir cancha, deporte, fecha/hora, vibra, cupos y pago móvil de un partido `abierto`/`completo` (no `cancelado`/`vencido`) — la visibilidad sigue teniendo su propio switch, fuera de este form. Reutiliza `UpdateMatchFormSchema` (deriva del mismo shape que `CreateMatchFormSchema` en `lib/matches/definitions.ts`, sin `visibility`/`notifyAudience`). No deja bajar `totalSlots` por debajo de `slots_filled` actual. Si cambia alguno de los campos que le importan a un jugador (fecha/hora, cancha, deporte, vibra, cupos), dispara `notifyMatchUpdated` a los confirmados; los cambios de pago móvil no notifican.
-- `match_participants` — quién está en qué partido, con `status`: `confirmado` (jugando), `pendiente` (solicitud a un partido público, esperando aprobación del organizador vía `respondToRequest`), `rechazado` (solicitud rechazada), o `invitado` (invitación del organizador a un partido privado, esperando respuesta del invitado — ver abajo). El organizador se inserta `confirmado` al crear el partido (no es una solicitud). `joined_via` (`red_directa`/`externo`, calculado con la RPC `is_direct_network`) es solo informativo. El trigger `recalc_match_slots` solo cuenta filas `confirmado` para `slots_filled`, así que ni una solicitud `pendiente` ni una invitación `invitado` ocupan cupo hasta confirmarse.
+- `match_participants` — quién está en qué partido, con `status`: `confirmado` (jugando), `pendiente` (solicitud a un partido público, esperando aprobación del organizador vía `respondToRequest`), `rechazado` (solicitud rechazada), o `invitado` (invitación del organizador a un partido privado, esperando respuesta del invitado — ver abajo). El organizador se inserta `confirmado` al crear el partido (no es una solicitud). `joined_via` (`red_directa`/`externo`, calculado con la RPC `is_direct_network`) es solo informativo. El trigger `recalc_match_slots` solo cuenta filas `confirmado` para `slots_filled`, así que ni una solicitud `pendiente` ni una invitación `invitado` ocupan cupo hasta confirmarse. `getMyInvolvedMatches` (`lib/auth/dal.ts`) además cuenta, por cada partido que el usuario organiza, sus filas `pendiente` (`MatchWithCourt.pendingRequestCount`) para el badge "N por aprobar" que muestra `partidos-client.tsx` en "Mis partidos".
   - **Flujo de invitación (públicos y privados):** el organizador de cualquier partido abierto con cupos libres llama `inviteToMatch` (elige "todos mis amigos" o usuarios específicos vía el panel de amigos de `components/matches/invite-players.tsx`, que combina la lista de `getMyFriends()` con `searchUsersAction`) o `inviteGroupToMatch` (invita de un toque a todos los `miembro` de uno de sus grupos, elegido en la sección plegable "Invitar a un grupo" del mismo `invite-players.tsx` + `getGroupMemberIds`) — ambas comparten el helper privado `inviteUserIdsToMatch` (skip de duplicados, `is_direct_network`, insert, `notifyInvited`, `revalidatePath`) para no duplicar esa lógica. Insertan filas `invitado`, saltando duplicados. El invitado ve la invitación en el home (`InvitationsSection`), en `/invitaciones`, y en el detalle del partido, y llama `respondToInvitation`: aceptar pasa la fila a `confirmado` directo (sin aprobación extra del organizador — ya decidió al invitar); rechazar **borra** la fila, así el organizador puede reinvitar. RLS: policy de INSERT permite al organizador insertar `invitado`; policy de UPDATE permite al invitado pasar su propia fila de `invitado` a `confirmado` (no puede escribir otro status).
 - `push_subscriptions` — suscripciones Web Push por usuario.
+- `notifications` — historial in-app de eventos sociales (`user_id` destinatario, `type`, `title`/`body`, `url` deep-link, `actor_id` opcional, `read_at`). Se escribe en el mismo punto donde hoy se envía el push equivalente, vía `notifyAndPersist` (ver más abajo). RLS: `SELECT`/`UPDATE` solo de la fila propia (`user_id = auth.uid()`); **sin** policy de `INSERT` para clientes normales — se escribe con el cliente service-role (`lib/supabase/admin.ts`), igual que la lectura cross-user de `push_subscriptions`. Habilitada en `supabase_realtime` para el badge de la campana.
 - `court_events` — tracking simple (impresión, click, whatsapp, directions, promo_copy, match_created) usado en métricas de admin.
 - `groups` — grupo de amigos con nombre, `owner_id` (creador) e `invite_token` (uuid, rotable con `rotateGroupInviteToken`, único, es lo que canjea `/grupos/unirse/[token]`). El creador no puede salirse del grupo (solo eliminarlo, `on delete cascade` limpia las membresías) y es el único que renombra/elimina/saca miembros; cualquier `miembro` puede invitar y compartir el link.
 - `group_members` — quién pertenece a qué grupo, con `status` (`invitado`/`miembro`) e `inviter_id`. Índice único por par `(group_id, user_id)`, igual que `friendships`. **Flujo de invitación:** un miembro llama `inviteToGroup` (buscador `components/groups/group-user-search.tsx` + `searchUsersForGroup`) → inserta filas `invitado`, saltando duplicados, y dispara `notifyGroupInvited`. El invitado ve la invitación en `/invitaciones` y llama `respondToGroupInvitation`: aceptar pasa a `miembro`; rechazar **borra** la fila (mismo patrón que las invitaciones a partido). **Unirse por link:** `/grupos/unirse/[token]` primero muestra una vista de confirmación (`getGroupPreviewByToken`, RPC de solo lectura) — abrir el link nunca une por sí solo, porque un GET (prefetch de Next, preview de link de WhatsApp) no debe tener efectos secundarios; el botón "Unirme" llama la action `joinGroupByToken`, que ejecuta la RPC `join_group_by_token` (inserta/actualiza a `miembro`, también acepta una invitación pendiente). Ambas RPCs son `SECURITY DEFINER` y tienen `EXECUTE` revocado de `anon` explícitamente — en Supabase el privilegio se otorga por defecto de forma directa al crear la función, así que `revoke ... from public` solo no alcanza. RLS de `group_members` usa tres helpers `SECURITY DEFINER` (`user_is_group_member`, `user_has_group_row`, `user_is_group_owner`) para evitar la recursión infinita que produciría una policy de SELECT auto-referenciada (mismo patrón que `user_is_match_participant`/`user_is_match_organizer`).
@@ -113,7 +118,7 @@ Regla de negocio clave que se repite en el código: **nunca hay pagos dentro de 
 - El middleware (`lib/supabase/proxy.ts`) solo refresca el token de cookies — **no es la barrera de seguridad**, cada action revalida sesión por su cuenta.
 - `/login` acepta `?next=<path>` (usado por `/grupos/unirse/[token]` para volver ahí tras iniciar sesión): `login-form.tsx` lo manda como campo oculto y la action `login` solo redirige ahí si es un path relativo (`startsWith("/")` y no `"//"`, para evitar un open-redirect), si no cae en `/`.
 
-## Notificaciones push
+## Notificaciones (push + centro in-app)
 
 **Suscripción (cliente).** El usuario activa el toggle en `components/enable-notifications.tsx`
 → `subscribeToPush()` (`lib/push/subscribe-client.ts`) → la action `savePushSubscription`.
@@ -124,10 +129,17 @@ el onboarding ya no pide el permiso dentro de su form action — solo guarda los
 scopes y remite a Ajustes.
 
 **Envío (servidor).** `lib/push/send.ts` (`server-only`) envuelve `web-push`:
-- `notifyUsers(userIds, payload)` — destinatarios concretos.
-- `notifyMatchAudience(supabase, matchId, payload)` — difusión "faltan jugadores",
-  uniendo los scopes de `AUDIENCE_SCOPES` vía la función SQL
+- `notifyUsers(userIds, payload)` — solo push, destinatarios concretos.
+- `notifyMatchAudience(supabase, matchId, payload)` — solo push, difusión "faltan
+  jugadores", uniendo los scopes de `AUDIENCE_SCOPES` vía la función SQL
   `resolve_audience_subscriptions` y deduplicando por endpoint.
+- `notifyAndPersist(supabase, userIds, payload, type, actorId?)` — push (`notifyUsers`)
+  **y**, en paralelo, guarda la misma notificación en la tabla `notifications`
+  (`persistNotifications`, `lib/notifications/create.ts`) para que quien no vio/no
+  tiene el push activado la encuentre igual en `/notificaciones`. Es lo que usan
+  todos los eventos dirigidos a usuarios concretos; los de audiencia amplia
+  (`notifyMatchAudience`, "faltan jugadores") se quedan solo en push a propósito —
+  serían ruido en un feed personal.
 - Todo es best-effort: nunca lanza (una notificación caída no puede tumbar la
   action que ya escribió), y ante 404/410 borra la suscripción muerta.
 
@@ -142,20 +154,40 @@ importa — fecha/hora, cancha, deporte, vibra o cupos). Crear un
 partido **no** avisa por sí solo: la difusión a la audiencia es opt-in, con la
 casilla `notifyAudience` del formulario de creación, y solo para públicos.
 Mismo patrón para grupos en `lib/push/group-notifications.ts`: `inviteToGroup`
-dispara `notifyGroupInvited` (único trigger — responder, salir, sacar o unirse
-por link no notifican, igual que las solicitudes de amistad).
+dispara `notifyGroupInvited`, y aceptar una invitación o unirse por link dispara
+`notifyGroupJoined` al dueño del grupo (salir o sacar a alguien no notifican).
+Y para amistades en `lib/push/friend-notifications.ts`: `sendFriendRequest` dispara
+`notifyFriendRequest`, `acceptFriendRequest` dispara `notifyFriendAccepted`
+(rechazar/cancelar/eliminar no notifican).
 `sendTestNotification` y `getPushDiagnostics` en `app/actions/push.ts` permiten
-verificar la cadena completa desde el propio teléfono (Ajustes → notificaciones).
+verificar la cadena completa desde el propio teléfono (Ajustes → notificaciones) —
+pero solo cubren el push a uno mismo (subscription propia, legible por RLS); no
+prueban el camino cross-user (`notifyAndPersist` a otro usuario), que depende de
+la service-role key de más abajo.
 
-**RLS.** `push_subscriptions` normalmente está limitada a su dueño, así que
-notificar a otros usuarios prefiere el cliente service-role de
-`lib/supabase/admin.ts` — es el único lugar que lo usa. La alternativa (una
+**Centro in-app (`/notificaciones`).** Cada fila que `notifyAndPersist` guarda queda
+disponible en `getNotifications()`/`getUnreadNotificationCount()` (`lib/auth/dal.ts`).
+La campana de `header-nav.tsx` (badge de no leídas, refrescado por realtime sobre
+`notifications`) enlaza a `app/notificaciones/page.tsx`, que renderiza
+`components/notifications/notifications-list.tsx` y marca todo como leído
+(`markAllNotificationsRead`, `app/actions/notifications.ts`) al montarse. Es un feed
+puramente informativo — no reemplaza `/invitaciones` ni sus badges, que siguen
+siendo el lugar donde se acepta/rechaza.
+
+**RLS.** `push_subscriptions` y `notifications` normalmente están limitadas a su
+dueño, así que escribir/notificar a otros usuarios prefiere el cliente
+service-role de `lib/supabase/admin.ts` — es el único lugar que lo usa (tanto
+`getSubscriptionsForUsers` como `persistNotifications`). La alternativa (una
 función `SECURITY DEFINER` genérica) tendría que ser ejecutable por
-`authenticated`, lo que le daría a cualquier usuario logueado las claves push del
-resto. Si `SUPABASE_SERVICE_ROLE_KEY` no está configurada,
-`getSubscriptionsForUsers` cae a leer con el cliente de la sesión: funciona si la
-política de SELECT resulta permisiva, y si no, `getPushDiagnostics` lo reporta en
-la UI en vez de fallar en silencio.
+`authenticated`, lo que le daría a cualquier usuario logueado las claves push (o
+la posibilidad de escribir notificaciones) del resto. Si `SUPABASE_SERVICE_ROLE_KEY`
+no está configurada: `getSubscriptionsForUsers` cae a leer con el cliente de la
+sesión (funciona solo si la política de SELECT resulta permisiva; si no,
+`getPushDiagnostics` lo reporta en la UI en vez de fallar en silencio) y
+`persistNotifications` simplemente no-opea con un `console.warn` — este fue
+justo el bug reportado ("no llegan los push de solicitud de unirse pero la
+prueba sí"): la prueba se manda a la propia subscription (legible por RLS con
+la sesión propia), pero avisar a otro usuario (el organizador) sí necesita la key.
 
 **Variables de entorno:** `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (se inlinea en build →
 cambiarla exige redeploy), `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y
@@ -166,7 +198,10 @@ cambiarla exige redeploy), `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y
 en una pestaña de Safari `PushManager` no existe (`needsIosInstall()`).
 
 `public/sw.js` es el service worker que recibe el push (`{ title, body, url }`),
-muestra la notificación y maneja el click.
+muestra la notificación y maneja el click: reutiliza y **navega** (`client.navigate`)
+una ventana ya abierta al `url` del payload en vez de solo enfocarla — enfocar sin
+navegar es lo que hacía que tocar la notificación abriera el home en una PWA con
+una pestaña ya abierta.
 
 ## Testing
 

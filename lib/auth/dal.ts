@@ -125,6 +125,9 @@ export type Match = Tables<"matches">;
 export type MatchWithCourt = Match & {
   court: Pick<Court, "id" | "name"> | null;
   organizer: { name: string | null } | null;
+  /** Pending join requests for a match this user organizes. Only populated
+   * by queries that compute it (`getMyInvolvedMatches`); undefined elsewhere. */
+  pendingRequestCount?: number;
 };
 
 /**
@@ -206,6 +209,30 @@ export const getMyInvolvedMatches = cache(async (): Promise<MatchWithCourt[]> =>
           await supabase.from("matches").select(matchSelect).in("id", joinedMatchIds)
         ).data as MatchWithCourt[] | null) ?? []
       : [];
+
+  // Pending join requests only matter for matches this user organizes — a
+  // participant can't approve anyone else's request, so there's nothing to
+  // badge on `joined`.
+  if (organized.length > 0) {
+    const { data: pendingRows } = await supabase
+      .from("match_participants")
+      .select("match_id")
+      .in(
+        "match_id",
+        organized.map((m) => m.id),
+      )
+      .eq("status", "pendiente");
+
+    const pendingCounts = new Map<string, number>();
+    for (const row of pendingRows ?? []) {
+      if (!row.match_id) continue;
+      pendingCounts.set(row.match_id, (pendingCounts.get(row.match_id) ?? 0) + 1);
+    }
+
+    for (const match of organized) {
+      match.pendingRequestCount = pendingCounts.get(match.id) ?? 0;
+    }
+  }
 
   return [...organized, ...joined].sort(
     (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
@@ -395,6 +422,39 @@ export const getMyInvitations = cache(async (): Promise<MatchInvitation[]> => {
     .filter((row) => row.match.status === "abierto")
     .map((row) => ({ participantId: row.id, match: row.match }))
     .sort((a, b) => a.match.datetime.localeCompare(b.match.datetime));
+});
+
+export type Notification = Tables<"notifications">;
+
+/** Fetches the current user's notification feed, most recent first. */
+export const getNotifications = cache(async (limit = 30): Promise<Notification[]> => {
+  const session = await verifySession();
+  if (!session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", session.userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return data ?? [];
+});
+
+/** Count of unread notifications — drives the bell badge in the header. */
+export const getUnreadNotificationCount = cache(async (): Promise<number> => {
+  const session = await verifySession();
+  if (!session) return 0;
+
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", session.userId)
+    .is("read_at", null);
+
+  return count ?? 0;
 });
 
 export type NetworkUser = Pick<UserProfile, "id" | "name" | "created_at">;

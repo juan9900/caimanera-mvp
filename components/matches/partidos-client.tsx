@@ -60,9 +60,18 @@ function MatchListItem({ match, showOrganizer }: { match: MatchWithCourt; showOr
             {showOrganizer ? ` · organiza ${match.organizer?.name ?? "alguien"}` : ""}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-surface-variant px-2 py-0.5 font-label text-xs font-bold text-on-surface">
-          {match.slots_filled}/{match.total_slots}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className="rounded-full bg-surface-variant px-2 py-0.5 font-label text-xs font-bold text-on-surface">
+            {match.slots_filled}/{match.total_slots}
+          </span>
+          {!!match.pendingRequestCount && (
+            <span className="rounded-full bg-primary-lime px-2 py-0.5 font-label text-xs font-bold text-on-primary">
+              {match.pendingRequestCount === 1
+                ? "1 solicitud por aprobar"
+                : `${match.pendingRequestCount} solicitudes por aprobar`}
+            </span>
+          )}
+        </div>
       </Link>
     </li>
   );
@@ -113,6 +122,11 @@ export function PartidosClient({
     return { activeMyMatches: active, pastMyMatches: past };
   }, [myMatches]);
 
+  const totalPendingRequests = useMemo(
+    () => activeMyMatches.reduce((sum, m) => sum + (m.pendingRequestCount ?? 0), 0),
+    [activeMyMatches],
+  );
+
   function toggleSport(sportKey: string) {
     setSportFilter((current) =>
       current.includes(sportKey) ? current.filter((k) => k !== sportKey) : [...current, sportKey],
@@ -127,7 +141,9 @@ export function PartidosClient({
             { value: "explorar", label: "Explorar" },
             {
               value: "mis",
-              label: `Mis partidos${myMatches.length > 0 ? ` (${myMatches.length})` : ""}`,
+              label: `Mis partidos${myMatches.length > 0 ? ` (${myMatches.length})` : ""}${
+                totalPendingRequests > 0 ? ` · ${totalPendingRequests} por aprobar` : ""
+              }`,
             },
           ]}
           value={tab}

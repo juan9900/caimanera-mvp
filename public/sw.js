@@ -29,18 +29,28 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url ?? "/";
 
+  // Reuse an already-open window instead of just focusing it — a PWA left
+  // open on the home screen would otherwise "open" the notification's link
+  // by focusing the home tab without ever navigating it anywhere.
   event.waitUntil(
-    self.clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clients) => {
-        for (const client of clients) {
-          if (client.url.includes(url) && "focus" in client) {
-            return client.focus();
+    (async () => {
+      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+
+      for (const client of clients) {
+        if (!("focus" in client)) continue;
+        await client.focus();
+        if ("navigate" in client) {
+          try {
+            await client.navigate(url);
+          } catch {
+            // Cross-origin or otherwise unnavigable; the focused tab is
+            // still better than nothing.
           }
         }
-        if (self.clients.openWindow) {
-          return self.clients.openWindow(url);
-        }
-      })
+        return;
+      }
+
+      if (self.clients.openWindow) await self.clients.openWindow(url);
+    })()
   );
 });

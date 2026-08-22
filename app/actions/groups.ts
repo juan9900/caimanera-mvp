@@ -19,7 +19,7 @@ import {
   type GroupActionResult,
   type CreateGroupFormState,
 } from "@/lib/groups/definitions";
-import { notifyGroupInvited } from "@/lib/push/group-notifications";
+import { notifyGroupInvited, notifyGroupJoined } from "@/lib/push/group-notifications";
 
 /** Delegates to the DAL search, exposed as an action so client components can call it. */
 export async function searchUsersForGroupAction(
@@ -190,7 +190,7 @@ export async function inviteToGroup(formData: FormData): Promise<GroupActionResu
   if (error) return { message: "No se pudo invitar. Intenta de nuevo." };
 
   const profile = await getCurrentUserProfile();
-  await notifyGroupInvited(supabase, toInvite, group.name, profile?.name ?? null);
+  await notifyGroupInvited(supabase, toInvite, group.name, profile?.name ?? null, session.userId);
 
   revalidatePath(`/grupos/${groupId}`);
 }
@@ -233,6 +233,24 @@ export async function respondToGroupInvitation(formData: FormData): Promise<Grou
     .eq("status", "invitado");
 
   if (error) return { message: "No se pudo aceptar la invitación. Intenta de nuevo." };
+
+  const { data: group } = await supabase
+    .from("groups")
+    .select("name, owner_id")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (group && group.owner_id !== session.userId) {
+    const profile = await getCurrentUserProfile();
+    await notifyGroupJoined(
+      supabase,
+      group.owner_id,
+      groupId,
+      group.name,
+      profile?.name ?? null,
+      session.userId
+    );
+  }
 
   revalidatePath("/invitaciones");
   revalidatePath("/grupos");
@@ -336,7 +354,7 @@ export async function rotateGroupInviteToken(formData: FormData): Promise<GroupA
  * same consent.
  */
 export async function joinGroupByToken(formData: FormData): Promise<GroupActionResult> {
-  await requireSession();
+  const session = await requireSession();
 
   const validatedFields = JoinGroupSchema.safeParse({ token: formData.get("token") });
   if (!validatedFields.success) return { message: "Link de invitación inválido." };
@@ -349,6 +367,24 @@ export async function joinGroupByToken(formData: FormData): Promise<GroupActionR
 
   if (error || !groupId) {
     return { message: "Este link ya no es válido. Pídele uno nuevo a quien te invitó." };
+  }
+
+  const { data: group } = await supabase
+    .from("groups")
+    .select("name, owner_id")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (group && group.owner_id !== session.userId) {
+    const profile = await getCurrentUserProfile();
+    await notifyGroupJoined(
+      supabase,
+      group.owner_id,
+      groupId,
+      group.name,
+      profile?.name ?? null,
+      session.userId
+    );
   }
 
   revalidatePath("/grupos");

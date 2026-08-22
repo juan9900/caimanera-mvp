@@ -67,7 +67,7 @@ export function SignupForm({ defaultInviteCode }: { defaultInviteCode?: string }
       <button
         disabled={pending}
         type="submit"
-        className="w-full rounded-lg bg-primary-lime px-4 py-2.5 font-display text-sm font-bold uppercase tracking-wide text-on-primary shadow-[0_4px_12px_rgba(195,244,0,0.2)] disabled:opacity-50"
+        className="w-full rounded-lg bg-primary-lime px-4 py-2.5 font-display text-sm font-bold uppercase tracking-wide text-on-primary disabled:opacity-50"
       >
         {pending ? "Creando cuenta..." : "Crear cuenta"}
       </button>

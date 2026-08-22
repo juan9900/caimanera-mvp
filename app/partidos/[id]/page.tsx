@@ -44,7 +44,7 @@ const JOINED_VIA_LABELS: Record<string, string> = {
 };
 
 const PRIMARY_BUTTON =
-  "rounded-lg bg-primary-lime px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-on-primary shadow-[0_4px_12px_rgba(195,244,0,0.2)] disabled:opacity-50";
+  "rounded-lg bg-primary-lime px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-on-primary disabled:opacity-50";
 const OUTLINE_BUTTON =
   "rounded-lg border border-surface-variant px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-on-surface disabled:opacity-50";
 const DANGER_BUTTON =

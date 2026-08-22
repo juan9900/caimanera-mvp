@@ -29,7 +29,7 @@ export default async function JoinGroupPage(props: PageProps<"/grupos/unirse/[to
             hiddenFields={{ token }}
             label="Unirme al grupo"
             pendingLabel="Uniéndome…"
-            className="rounded-lg bg-primary-lime px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wide text-on-primary shadow-[0_4px_12px_rgba(195,244,0,0.2)]"
+            className="rounded-lg bg-primary-lime px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wide text-on-primary"
           />
         </>
       ) : (

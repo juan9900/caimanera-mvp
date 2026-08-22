@@ -35,6 +35,8 @@ export type HomeCourt = Pick<
   | "promo_expires_at"
   | "sponsored_until"
   | "sponsor_priority"
+  | "rating_avg"
+  | "rating_count"
 >;
 
 export type HomeMatch = Tables<"matches"> & {

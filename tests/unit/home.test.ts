@@ -28,6 +28,8 @@ function makeCourt(overrides: Partial<HomeCourt> = {}): HomeCourt {
     promo_expires_at: null,
     sponsored_until: null,
     sponsor_priority: 0,
+    rating_avg: 0,
+    rating_count: 0,
     ...overrides,
   };
 }

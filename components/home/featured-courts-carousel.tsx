@@ -7,6 +7,7 @@ import { MapPin, Megaphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { FeaturedCourt } from "@/lib/matches/home";
 import { AmenityIcons } from "@/components/courts/amenity-icons";
+import { RatingStars } from "@/components/courts/rating-stars";
 
 // TODO: swap for a dedicated sales inbox/WhatsApp once there's one.
 const SPONSOR_INQUIRY_MAILTO =
@@ -78,9 +79,12 @@ function SponsoredCourtCard({
         <p className="truncate font-display text-lg font-bold text-on-surface">
           {court.name}
         </p>
-        <p className="mt-1 flex items-center gap-1 truncate font-label text-xs text-on-surface-variant">
-          <MapPin aria-hidden size={14} />
-          {distanceLabel ? `${distanceLabel} · Maracaibo` : "Maracaibo"}
+        <p className="mt-1 flex items-center gap-1.5 truncate font-label text-xs text-on-surface-variant">
+          <span className="flex items-center gap-1 truncate">
+            <MapPin aria-hidden size={14} />
+            {distanceLabel ? `${distanceLabel} · Maracaibo` : "Maracaibo"}
+          </span>
+          <RatingStars avg={court.rating_avg} count={court.rating_count} />
         </p>
         <p className="mt-2 truncate font-body text-sm text-primary-lime">
           {promo ??

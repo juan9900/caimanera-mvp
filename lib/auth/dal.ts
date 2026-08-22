@@ -299,7 +299,7 @@ export const getOfficialCourts = cache(async (): Promise<HomeCourt[]> => {
   const { data } = await supabase
     .from("courts")
     .select(
-      "id, name, lat, lng, address, sports, is_official, photos, logo_url, amenities, promo_text, promo_code, promo_expires_at, sponsored_until, sponsor_priority",
+      "id, name, lat, lng, address, sports, is_official, photos, logo_url, amenities, promo_text, promo_code, promo_expires_at, sponsored_until, sponsor_priority, rating_avg, rating_count",
     )
     .or(`is_official.eq.true,sponsored_until.gt.${new Date().toISOString()}`)
     .order("name");

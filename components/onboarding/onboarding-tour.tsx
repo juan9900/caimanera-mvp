@@ -218,7 +218,7 @@ export function OnboardingTour({ run }: { run: boolean }) {
             <button
               type="button"
               onClick={next}
-              className="rounded-lg bg-primary-lime px-4 py-2 font-display text-xs font-bold uppercase tracking-wide text-on-primary shadow-[0_4px_12px_rgba(195,244,0,0.2)]"
+              className="rounded-lg bg-primary-lime px-4 py-2 font-display text-xs font-bold uppercase tracking-wide text-on-primary"
             >
               {stepIndex === STEPS.length - 1 ? "Finalizar" : "Siguiente"}
             </button>

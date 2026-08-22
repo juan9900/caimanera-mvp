@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { completeOnboarding } from "@/app/actions/profile";
+import { sendTestNotification } from "@/app/actions/push";
 import { SPORTS } from "@/lib/courts/sports";
 import { SportChip } from "@/components/courts/sport-chip";
 import { CityPicker } from "@/components/location/city-picker";
+import { EnableNotifications } from "@/components/enable-notifications";
 import type { LocationCandidate } from "@/app/actions/location";
 
 const NOTIFICATION_OPTIONS = [
@@ -18,8 +20,17 @@ export function OnboardingForm() {
   const [notificationScopes, setNotificationScopes] = useState<string[]>([]);
   const [sportPreferences, setSportPreferences] = useState<string[]>([]);
   const [location, setLocation] = useState<LocationCandidate | null>(null);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushMessage, setPushMessage] = useState<string | null>(null);
+  const [testPending, startTestTransition] = useTransition();
 
-  const noNotifications = notificationScopes.length === 0;
+  function testNotification() {
+    setPushMessage(null);
+    startTestTransition(async () => {
+      const result = await sendTestNotification();
+      setPushMessage(result.message);
+    });
+  }
 
   function toggleScope(value: string) {
     setNotificationScopes((prev) =>
@@ -122,17 +133,21 @@ export function OnboardingForm() {
         <legend className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
           Notificaciones
         </legend>
-        <div className="mt-2 space-y-2">
-          <label className="flex items-center gap-2 font-body text-on-surface">
-            <input
-              type="checkbox"
-              checked={noNotifications}
-              onChange={() => setNotificationScopes([])}
-              className="accent-primary-lime"
-            />
-            No quiero recibir notificaciones
-          </label>
-          <div className="ml-1 space-y-1 border-l border-surface-variant pl-3">
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-surface-variant bg-surface-container px-3 py-2.5">
+          <span className="font-body text-sm text-on-surface">Activar notificaciones</span>
+          <EnableNotifications
+            onEnabled={() => {
+              if (notificationScopes.length === 0) {
+                setNotificationScopes(NOTIFICATION_OPTIONS.map((opt) => opt.value));
+              }
+            }}
+            onStatusChange={setPushEnabled}
+            onMessage={setPushMessage}
+          />
+        </div>
+
+        {pushEnabled && (
+          <div className="mt-3 space-y-1 border-l border-surface-variant pl-3">
             {NOTIFICATION_OPTIONS.map((opt) => (
               <label key={opt.value} className="flex items-center gap-2 font-body text-on-surface">
                 <input
@@ -147,16 +162,22 @@ export function OnboardingForm() {
               </label>
             ))}
           </div>
-        </div>
+        )}
         {state?.errors?.notificationScopes && (
           <p className="mt-1 font-body text-sm text-dark-error">{state.errors.notificationScopes[0]}</p>
         )}
-        {!noNotifications && (
-          <p className="mt-2 font-body text-xs text-on-surface-variant">
-            Falta un paso: el permiso del teléfono se pide desde Ajustes, con el
-            interruptor de notificaciones.
-          </p>
+
+        {pushEnabled && (
+          <button
+            type="button"
+            onClick={testNotification}
+            disabled={testPending}
+            className="mt-3 font-body text-xs text-primary-lime underline underline-offset-4 disabled:opacity-50"
+          >
+            Enviar notificación de prueba
+          </button>
         )}
+        {pushMessage && <p className="mt-2 font-body text-xs text-on-surface-variant">{pushMessage}</p>}
       </fieldset>
 
       {state?.message && <p className="font-body text-sm text-dark-error">{state.message}</p>}

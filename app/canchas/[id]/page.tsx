@@ -71,6 +71,13 @@ export default async function CourtDetailPage(
             courtName={court.name}
           />
 
+          <Link
+            href={`/partidos/nuevo?courtId=${court.id}`}
+            className="inline-flex items-center justify-center rounded-lg bg-primary-lime px-4 py-2.5 font-display text-sm font-bold uppercase tracking-wide text-on-primary active:scale-[0.98]"
+          >
+            Crear partido acá
+          </Link>
+
           {isPromoActive(court) && (
             <CourtPromo courtId={court.id} promoText={court.promo_text!} promoCode={court.promo_code} />
           )}
@@ -203,7 +210,13 @@ export default async function CourtDetailPage(
         </div>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap gap-3">
+        <Link
+          href={`/partidos/nuevo?courtId=${court.id}`}
+          className="inline-flex items-center justify-center rounded-lg bg-primary-lime px-4 py-2 font-display text-sm font-bold uppercase tracking-wide text-on-primary active:scale-[0.98]"
+        >
+          Crear partido acá
+        </Link>
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${court.lat},${court.lng}`}
           target="_blank"

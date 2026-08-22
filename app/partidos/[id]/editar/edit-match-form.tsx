@@ -2,13 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useActionState } from "react";
-import { createMatch } from "@/app/actions/matches";
+import { updateMatch } from "@/app/actions/matches";
 import { CourtPickerMap } from "@/components/court-picker-map";
 import { CourtPicker } from "@/components/courts/court-picker";
 import { SportChip } from "@/components/courts/sport-chip";
-import { VisibilityToggle } from "@/components/matches/visibility-toggle";
 import type { Court } from "@/lib/auth/dal";
-import { BANK_OPTIONS, type MatchVisibility } from "@/lib/matches/definitions";
+import { BANK_OPTIONS } from "@/lib/matches/definitions";
 import { SPORTS } from "@/lib/courts/sports";
 import { sortCourtsForCreateMatchPicker } from "@/lib/courts/sort";
 
@@ -16,24 +15,41 @@ const INPUT_CLASSNAME =
   "mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface focus:border-primary-lime focus:outline-none";
 const LABEL_CLASSNAME = "block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant";
 
-export function CreateMatchForm({
+export function EditMatchForm({
+  matchId,
   courts,
-  preferredSports,
-  initialCourt,
+  initialCourtId,
+  initialSport,
+  initialDatetime,
+  initialVibe,
+  initialTotalSlots,
+  slotsFilled,
+  initialPaymentBank,
+  initialPaymentPhone,
+  initialPaymentCedula,
+  initialPaymentAmountBs,
 }: {
+  matchId: string;
   courts: Court[];
-  preferredSports?: string[];
-  initialCourt?: Court;
+  initialCourtId: string;
+  initialSport: string;
+  initialDatetime: string;
+  initialVibe: string;
+  initialTotalSlots: number;
+  slotsFilled: number;
+  initialPaymentBank: string | null;
+  initialPaymentPhone: string | null;
+  initialPaymentCedula: string | null;
+  initialPaymentAmountBs: number | null;
 }) {
-  const [state, action, pending] = useActionState(createMatch, undefined);
-  const [sport, setSport] = useState(
-    () => initialCourt?.sports?.find((s) => SPORTS.some((sp) => sp.key === s)) ?? "",
+  const [state, action, pending] = useActionState(updateMatch, undefined);
+  const [sport, setSport] = useState(initialSport);
+  const [courtId, setCourtId] = useState(initialCourtId);
+  const [vibe, setVibe] = useState(initialVibe);
+  const [totalSlots, setTotalSlots] = useState(initialTotalSlots);
+  const [paymentAmountBs, setPaymentAmountBs] = useState(
+    initialPaymentAmountBs != null ? String(initialPaymentAmountBs) : "",
   );
-  const [courtId, setCourtId] = useState(() => initialCourt?.id ?? "");
-  const [visibility, setVisibility] = useState<MatchVisibility>("publica");
-  const [notifyAudience, setNotifyAudience] = useState(false);
-  const [totalSlots, setTotalSlots] = useState(10);
-  const [paymentAmountBs, setPaymentAmountBs] = useState("");
   const selectedCourt = useMemo(() => courts.find((c) => c.id === courtId), [courts, courtId]);
   const availableSports = useMemo(
     () => SPORTS.filter((s) => selectedCourt?.sports?.includes(s.key)),
@@ -42,9 +58,7 @@ export function CreateMatchForm({
   const mappableCourts = courts.filter((c) => c.lat != null && c.lng != null);
   const sortedCourts = sortCourtsForCreateMatchPicker(courts);
   const amountPerPerson =
-    paymentAmountBs && totalSlots > 0
-      ? Number(paymentAmountBs) / totalSlots
-      : null;
+    paymentAmountBs && totalSlots > 0 ? Number(paymentAmountBs) / totalSlots : null;
 
   /** Switching court resets the picked sport if the new court doesn't offer it. */
   function handleCourtChange(nextCourtId: string) {
@@ -57,38 +71,7 @@ export function CreateMatchForm({
 
   return (
     <form action={action} className="w-full space-y-5">
-      <div>
-        <span className={LABEL_CLASSNAME}>Visibilidad</span>
-        <input type="hidden" name="visibility" value={visibility} />
-        <div className="mt-1">
-          <VisibilityToggle value={visibility} onChange={setVisibility} />
-        </div>
-        {visibility === "publica" && (
-          <>
-            <input
-              type="hidden"
-              name="notifyAudience"
-              value={notifyAudience ? "true" : "false"}
-            />
-            <label className="mt-3 flex items-start gap-3 font-body text-sm text-on-surface">
-              <input
-                type="checkbox"
-                checked={notifyAudience}
-                onChange={(e) => setNotifyAudience(e.target.checked)}
-                className="mt-0.5 accent-primary-lime"
-              />
-              <span>
-                Avisar que faltan jugadores
-                <span className="mt-0.5 block font-body text-xs text-on-surface-variant">
-                  Manda una notificación a quienes eligieron recibir avisos de
-                  partidos como este. Si no la marcas, el partido se publica en
-                  silencio.
-                </span>
-              </span>
-            </label>
-          </>
-        )}
-      </div>
+      <input type="hidden" name="matchId" value={matchId} />
 
       <div>
         <span className={LABEL_CLASSNAME}>Cancha</span>
@@ -104,7 +87,6 @@ export function CreateMatchForm({
                   courts={mappableCourts}
                   selectedId={courtId || null}
                   onSelect={handleCourtChange}
-                  preferredSports={preferredSports}
                 />
                 <p className="mt-1 font-body text-xs text-on-surface-variant">
                   Toca un marcador para elegir la cancha oficial.
@@ -149,6 +131,7 @@ export function CreateMatchForm({
           id="datetime"
           name="datetime"
           type="datetime-local"
+          defaultValue={initialDatetime}
           className={INPUT_CLASSNAME}
         />
         {state?.errors?.datetime && (
@@ -170,6 +153,9 @@ export function CreateMatchForm({
           onChange={(e) => setTotalSlots(Number(e.target.value))}
           className={INPUT_CLASSNAME}
         />
+        <p className="mt-1 font-body text-xs text-on-surface-variant">
+          {slotsFilled} confirmados — no puedes bajar de ese número.
+        </p>
         {state?.errors?.totalSlots && (
           <p className="mt-1 font-body text-sm text-dark-error">{state.errors.totalSlots[0]}</p>
         )}
@@ -179,11 +165,25 @@ export function CreateMatchForm({
         <legend className={LABEL_CLASSNAME}>Vibra</legend>
         <div className="mt-2 flex gap-4">
           <label className="flex items-center gap-2 font-body text-on-surface">
-            <input type="radio" name="vibe" value="relajado" defaultChecked className="accent-primary-lime" />
+            <input
+              type="radio"
+              name="vibe"
+              value="relajado"
+              checked={vibe === "relajado"}
+              onChange={() => setVibe("relajado")}
+              className="accent-primary-lime"
+            />
             Relajado
           </label>
           <label className="flex items-center gap-2 font-body text-on-surface">
-            <input type="radio" name="vibe" value="competitivo" className="accent-primary-lime" />
+            <input
+              type="radio"
+              name="vibe"
+              value="competitivo"
+              checked={vibe === "competitivo"}
+              onChange={() => setVibe("competitivo")}
+              className="accent-primary-lime"
+            />
             Competitivo
           </label>
         </div>
@@ -193,9 +193,7 @@ export function CreateMatchForm({
       </fieldset>
 
       <fieldset className="space-y-3 rounded-xl border border-surface-variant/50 bg-surface-container p-3">
-        <legend className={`px-1 ${LABEL_CLASSNAME}`}>
-          Pago móvil (opcional)
-        </legend>
+        <legend className={`px-1 ${LABEL_CLASSNAME}`}>Pago móvil (opcional)</legend>
         <p className="font-body text-xs text-on-surface-variant">
           Si vas a repartir el costo de la cancha, deja tus datos de pago móvil.
         </p>
@@ -207,7 +205,7 @@ export function CreateMatchForm({
           <select
             id="paymentBank"
             name="paymentBank"
-            defaultValue=""
+            defaultValue={initialPaymentBank ?? ""}
             className={INPUT_CLASSNAME}
           >
             <option value="">— Sin pago móvil —</option>
@@ -230,6 +228,7 @@ export function CreateMatchForm({
             id="paymentPhone"
             name="paymentPhone"
             type="tel"
+            defaultValue={initialPaymentPhone ?? ""}
             placeholder="0412-1234567"
             className={`${INPUT_CLASSNAME} placeholder:text-on-surface-variant/60`}
           />
@@ -246,6 +245,7 @@ export function CreateMatchForm({
             id="paymentCedula"
             name="paymentCedula"
             type="text"
+            defaultValue={initialPaymentCedula ?? ""}
             placeholder="V-12345678"
             className={`${INPUT_CLASSNAME} placeholder:text-on-surface-variant/60`}
           />
@@ -287,7 +287,7 @@ export function CreateMatchForm({
         type="submit"
         className="w-full rounded-lg bg-primary-lime px-4 py-2.5 font-display text-sm font-bold uppercase tracking-wide text-on-primary disabled:opacity-50"
       >
-        {pending ? "Creando..." : "Armar partido"}
+        {pending ? "Guardando..." : "Guardar cambios"}
       </button>
     </form>
   );

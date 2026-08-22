@@ -95,6 +95,21 @@ export async function notifyRequestApproved(
   });
 }
 
+/** An invitee accepted their invitation and is now confirmed — the organizer already
+ * decided by inviting, but still wants to know when someone actually joins. */
+export async function notifyMatchJoined(
+  supabase: Client,
+  matchId: string,
+  organizerId: string,
+  joinerName: string | null
+): Promise<void> {
+  await notifyUsers(supabase, [organizerId], {
+    title: "Se sumó un jugador a tu partido",
+    body: `${joinerName ?? "Un jugador"} aceptó tu invitación y ya está confirmado.`,
+    url: matchUrl(matchId),
+  });
+}
+
 /** The organizer invited specific players. */
 export async function notifyInvited(
   supabase: Client,
@@ -135,6 +150,33 @@ export async function notifyMatchReopened(
   await notifyUsers(supabase, userIds, {
     title: "Se reabrió un partido",
     body: "El organizador reabrió la caimanera para buscar más jugadores.",
+    url: matchUrl(matchId),
+  });
+}
+
+/**
+ * The organizer edited one or more base fields of the match (date/time,
+ * court, sport, vibe, slots) — confirmed players need to know, since it
+ * changes what they signed up for. `changes` is a list of human-readable
+ * labels (e.g. ["fecha y hora", "cancha"]) built by the caller from the diff.
+ */
+export async function notifyMatchUpdated(
+  supabase: Client,
+  matchId: string,
+  organizerId: string,
+  changes: string[]
+): Promise<void> {
+  if (changes.length === 0) return;
+
+  const userIds = await getConfirmedUserIds(supabase, matchId, organizerId);
+  if (userIds.length === 0) return;
+
+  await notifyUsers(supabase, userIds, {
+    title: "Cambió un partido",
+    body:
+      changes.length === 1
+        ? `El organizador actualizó: ${changes[0]}.`
+        : `El organizador actualizó: ${changes.join(", ")}.`,
     url: matchUrl(matchId),
   });
 }

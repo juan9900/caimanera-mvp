@@ -43,7 +43,7 @@ export async function sendFriendRequest(formData: FormData): Promise<FriendActio
     return { message: "No se pudo enviar la solicitud. Intenta de nuevo." };
   }
 
-  revalidatePath("/red");
+  revalidatePath("/amigos");
 }
 
 /** Accepts a friend request sent to the current user. */
@@ -61,7 +61,7 @@ export async function acceptFriendRequest(formData: FormData): Promise<FriendAct
 
   if (error) return { message: "No se pudo aceptar la solicitud. Intenta de nuevo." };
 
-  revalidatePath("/red");
+  revalidatePath("/amigos");
 }
 
 /** Rejects a friend request sent to the current user. */
@@ -79,7 +79,7 @@ export async function rejectFriendRequest(formData: FormData): Promise<FriendAct
 
   if (error) return { message: "No se pudo rechazar la solicitud. Intenta de nuevo." };
 
-  revalidatePath("/red");
+  revalidatePath("/amigos");
 }
 
 /** Cancels a friend request the current user sent. */
@@ -97,7 +97,7 @@ export async function cancelFriendRequest(formData: FormData): Promise<FriendAct
 
   if (error) return { message: "No se pudo cancelar la solicitud. Intenta de nuevo." };
 
-  revalidatePath("/red");
+  revalidatePath("/amigos");
 }
 
 /** Removes an accepted friendship (either side can trigger it). */
@@ -115,5 +115,5 @@ export async function removeFriend(formData: FormData): Promise<FriendActionResu
 
   if (error) return { message: "No se pudo eliminar la amistad. Intenta de nuevo." };
 
-  revalidatePath("/red");
+  revalidatePath("/amigos");
 }

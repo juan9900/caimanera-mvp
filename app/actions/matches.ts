@@ -8,13 +8,17 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   CreateMatchFormSchema,
+  UpdateMatchFormSchema,
   type CreateMatchFormState,
+  type UpdateMatchFormState,
 } from "@/lib/matches/definitions";
 import {
   notifyInvited,
   notifyJoinRequest,
   notifyMatchCancelled,
+  notifyMatchJoined,
   notifyMatchReopened,
+  notifyMatchUpdated,
   notifyNewPublicMatch,
   notifyRequestApproved,
 } from "@/lib/push/match-notifications";
@@ -315,7 +319,7 @@ export async function respondToInvitation(formData: FormData): Promise<MatchActi
 
   const { data: match } = await supabase
     .from("matches")
-    .select("slots_filled, total_slots, status")
+    .select("slots_filled, total_slots, status, organizer_id")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -333,6 +337,9 @@ export async function respondToInvitation(formData: FormData): Promise<MatchActi
     .eq("status", "invitado");
 
   if (error) return { message: "No se pudo aceptar la invitación. Intenta de nuevo." };
+
+  const profile = await getCurrentUserProfile();
+  await notifyMatchJoined(supabase, matchId, match.organizer_id, profile?.name ?? null);
 
   revalidatePath("/");
   revalidatePath("/invitaciones");
@@ -483,5 +490,128 @@ export async function setMatchVisibility(formData: FormData): Promise<MatchActio
   revalidatePath("/");
   revalidatePath("/partidos");
   revalidatePath(`/partidos/${matchId}`);
+}
+
+const EDITABLE_MATCH_STATUSES = ["abierto", "completo"] as const;
+
+/** Human-readable labels for the fields `updateMatch` diffs, used in the push copy. */
+const UPDATE_FIELD_LABELS: Record<string, string> = {
+  datetime: "fecha y hora",
+  court_id: "cancha",
+  sport: "deporte",
+  vibe: "vibra",
+  total_slots: "cupos",
+};
+
+/**
+ * Organizer edits the base fields of their own match (court, sport,
+ * date/time, vibe, slots, payment details). Visibility has its own form
+ * (`setMatchVisibility`) and isn't part of this one. Only "abierto"/"completo"
+ * matches can be edited — a cancelled or expired match has nothing left to
+ * schedule. Confirmed players are notified of whichever of the
+ * player-facing fields (date/time, court, sport, vibe, slots) actually
+ * changed; payment detail edits don't trigger a push since they're not part
+ * of the diff below.
+ */
+export async function updateMatch(
+  _state: UpdateMatchFormState,
+  formData: FormData
+): Promise<UpdateMatchFormState> {
+  const session = await requireSession();
+  const matchId = formData.get("matchId");
+  if (typeof matchId !== "string") return { message: "Partido inválido." };
+
+  const validatedFields = UpdateMatchFormSchema.safeParse({
+    courtId: formData.get("courtId"),
+    sport: formData.get("sport"),
+    datetime: formData.get("datetime"),
+    vibe: formData.get("vibe"),
+    totalSlots: formData.get("totalSlots"),
+    paymentBank: formData.get("paymentBank"),
+    paymentPhone: formData.get("paymentPhone"),
+    paymentCedula: formData.get("paymentCedula"),
+    paymentAmountBs: formData.get("paymentAmountBs"),
+  });
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+
+  const {
+    courtId,
+    sport,
+    datetime,
+    vibe,
+    totalSlots,
+    paymentBank,
+    paymentPhone,
+    paymentCedula,
+    paymentAmountBs,
+  } = validatedFields.data;
+
+  const supabase = await createClient();
+
+  const { data: match } = await supabase
+    .from("matches")
+    .select("organizer_id, status, slots_filled, court_id, sport, datetime, vibe, total_slots")
+    .eq("id", matchId)
+    .maybeSingle();
+
+  if (!match) return { message: "El partido ya no existe." };
+  if (match.organizer_id !== session.userId) {
+    return { message: "Solo el organizador puede editar este partido." };
+  }
+  const editableStatuses: readonly string[] = EDITABLE_MATCH_STATUSES;
+  if (!editableStatuses.includes(match.status)) {
+    return { message: "Este partido ya no se puede editar." };
+  }
+  if (totalSlots < match.slots_filled) {
+    return {
+      errors: {
+        totalSlots: [
+          `No puedes bajar los cupos por debajo de los confirmados (${match.slots_filled}).`,
+        ],
+      },
+    };
+  }
+
+  const { error } = await supabase
+    .from("matches")
+    .update({
+      court_id: courtId,
+      sport,
+      datetime: datetime.toISOString(),
+      vibe,
+      total_slots: totalSlots,
+      payment_bank: paymentBank ?? null,
+      payment_phone: paymentPhone ?? null,
+      payment_cedula: paymentCedula ?? null,
+      payment_amount_bs: paymentAmountBs ?? null,
+    })
+    .eq("id", matchId)
+    .eq("organizer_id", session.userId);
+
+  if (error) return { message: "No se pudo actualizar el partido. Intenta de nuevo." };
+
+  const changedFields: string[] = [];
+  if (new Date(match.datetime).getTime() !== datetime.getTime()) changedFields.push("datetime");
+  if (match.court_id !== courtId) changedFields.push("court_id");
+  if (match.sport !== sport) changedFields.push("sport");
+  if (match.vibe !== vibe) changedFields.push("vibe");
+  if (match.total_slots !== totalSlots) changedFields.push("total_slots");
+
+  if (changedFields.length > 0) {
+    await notifyMatchUpdated(
+      supabase,
+      matchId,
+      session.userId,
+      changedFields.map((field) => UPDATE_FIELD_LABELS[field]),
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath("/partidos");
+  revalidatePath(`/partidos/${matchId}`);
+  redirect(`/partidos/${matchId}`);
 }
 

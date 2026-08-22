@@ -427,7 +427,12 @@ export default async function MatchDetailPage(
       </div>
 
       {isOrganizer && match.status !== "cancelado" && (
-        <div className="mt-8">
+        <div className="mt-8 flex flex-wrap gap-3">
+          {(match.status === "abierto" || match.status === "completo") && (
+            <Link href={`/partidos/${match.id}/editar`} className={OUTLINE_BUTTON}>
+              Editar partido
+            </Link>
+          )}
           <MatchActionForm
             action={cancelMatch}
             hiddenFields={{ matchId: match.id }}

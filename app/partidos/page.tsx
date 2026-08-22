@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { verifySession, getCurrentUserProfile, getOpenMatches, getMyInvolvedMatches } from "@/lib/auth/dal";
 import { PartidosClient } from "@/components/matches/partidos-client";
+import { LocationSelector } from "@/components/location/location-selector";
 
 export default async function PartidosPage() {
   const session = await verifySession();
@@ -19,6 +20,10 @@ export default async function PartidosPage() {
   return (
     <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
       <h1 className="mb-4 font-display text-2xl font-bold">Partidos</h1>
+
+      <div className="mb-4">
+        <LocationSelector authed initialLabel={profile.location_label ?? null} />
+      </div>
 
       <PartidosClient openMatches={otherMatches} myMatches={myMatches} />
     </div>

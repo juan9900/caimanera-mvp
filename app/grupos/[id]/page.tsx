@@ -102,7 +102,7 @@ export default async function GroupDetailPage(props: PageProps<"/grupos/[id]">) 
                 )}
                 {member.friendRelation === "pendiente_recibida" && (
                   <a
-                    href="/red"
+                    href="/amigos"
                     className="font-label text-xs font-bold text-primary-lime underline"
                   >
                     Te envió solicitud

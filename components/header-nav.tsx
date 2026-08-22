@@ -53,11 +53,11 @@ function SocialMenu({ friendRequestCount }: { friendRequestCount: number }) {
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-outline-variant/50 bg-surface-container p-1.5 shadow-xl">
           <Link
-            href="/red"
+            href="/amigos"
             onClick={() => setOpen(false)}
             className="flex items-center rounded-lg px-3 py-2 text-sm text-on-surface hover:bg-surface-variant/50"
           >
-            Mi red
+            Amigos
             <NavBadge count={friendRequestCount} />
           </Link>
           <Link
@@ -144,7 +144,7 @@ function AccountMenu({
  * Secondary header navigation — same on every screen size, and deliberately
  * does NOT duplicate the primary bottom tab bar (`components/bottom-nav-inner.tsx`,
  * which owns Inicio/Partidos/Crear/Canchas/Invitaciones). Only two entry
- * points live here: "Social" (Mi red + Grupos) and the account menu
+ * points live here: "Social" (Amigos + Grupos) and the account menu
  * (Perfil/Admin/Cerrar sesión).
  */
 export function HeaderNav({

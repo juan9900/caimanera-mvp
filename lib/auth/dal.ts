@@ -392,6 +392,31 @@ export const getMyParticipation = cache(
   },
 );
 
+export type ChatMessage = Tables<"chat_messages"> & {
+  author: { name: string | null; id: string } | null;
+};
+
+/**
+ * Fetches the chat history of a match, oldest first. RLS already restricts
+ * reads to the match organizer or confirmed participants, so this simply
+ * returns `[]` for anyone else instead of erroring.
+ */
+export const getChatMessages = cache(
+  async (matchId: string): Promise<ChatMessage[]> => {
+    const session = await verifySession();
+    if (!session) return [];
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("*, author:users(name, id)")
+      .eq("match_id", matchId)
+      .order("created_at", { ascending: true });
+
+    return (data as ChatMessage[] | null) ?? [];
+  },
+);
+
 export type MatchInvitation = {
   participantId: string;
   match: HomeMatch;

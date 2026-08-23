@@ -14,7 +14,9 @@ export type NotificationType =
   | "group_invited"
   | "group_joined"
   | "friend_request"
-  | "friend_accepted";
+  | "friend_accepted"
+  | "payment_reported"
+  | "payment_confirmed";
 
 export type PersistNotificationInput = {
   type: NotificationType;

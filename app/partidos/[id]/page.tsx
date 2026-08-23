@@ -11,6 +11,7 @@ import {
   getMyGroups,
   getFriendRelations,
   getGroupRelations,
+  getChatMessages,
 } from "@/lib/auth/dal";
 import {
   joinMatch,
@@ -22,10 +23,13 @@ import {
   reopenMatch,
   setMatchVisibility,
 } from "@/app/actions/matches";
+import { setPaymentConfirmed } from "@/app/actions/payments";
 import { ShareMatchButton } from "@/components/share-match-button";
 import { MatchActionForm } from "@/components/match-action-form";
 import { MatchVisibilitySwitch } from "@/components/matches/match-visibility-switch";
 import { InvitePlayers } from "@/components/matches/invite-players";
+import { MatchChat } from "@/components/matches/match-chat";
+import { ReportPaymentButton } from "@/components/matches/report-payment-button";
 import { AddFriendButton } from "@/components/friends/add-friend-button";
 import { SPORT_LABELS } from "@/lib/matches/home";
 
@@ -92,6 +96,16 @@ export default async function MatchDetailPage(
     .map((p) => p.user?.id)
     .filter((id): id is string => Boolean(id) && id !== profile.id);
   const confirmedFriendRelations = await getFriendRelations(confirmedUserIds);
+
+  const canSeeChat = isOrganizer || myParticipation?.status === "confirmado";
+  const chatMessages = canSeeChat ? await getChatMessages(id) : [];
+  const participantNames: Record<string, string | null> = {};
+  if (match.organizer) participantNames[match.organizer_id] = match.organizer.name;
+  for (const p of confirmed) {
+    if (p.user?.id) participantNames[p.user.id] = p.user.name;
+  }
+
+  const hasPayment = match.payment_amount_bs != null;
 
   function relationBadge(userId: string | undefined, joinedVia: string): string {
     if (userId && pendingFriendRelations.get(userId) === "amigos") return "Amigo";
@@ -204,6 +218,25 @@ export default async function MatchDetailPage(
             </div>
           )}
         </dl>
+      )}
+
+      {hasPayment && !isOrganizer && myParticipation?.status === "confirmado" && (
+        <div className="mt-4 rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3">
+          {myParticipation.payment_confirmed_at ? (
+            <p className="font-body text-sm font-medium text-primary-lime">Pago confirmado ✓</p>
+          ) : myParticipation.payment_reported_at ? (
+            <p className="font-body text-sm text-on-surface-variant">
+              Notificaste tu pago, está por confirmar.
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="font-body text-sm text-on-surface-variant">
+                ¿Ya pagaste tu cupo por Pago Móvil? Notifícalo.
+              </p>
+              <ReportPaymentButton matchId={match.id} />
+            </div>
+          )}
+        </div>
       )}
 
       <p className="mt-6 font-label text-xs text-on-surface-variant">
@@ -393,9 +426,15 @@ export default async function MatchDetailPage(
       )}
 
       <div className="mt-8">
-        <h2 className="mb-3 font-display text-lg font-bold text-on-surface">
+        <h2 className={`font-display text-lg font-bold text-on-surface ${hasPayment ? "" : "mb-3"}`}>
           Confirmados ({confirmed.length})
         </h2>
+        {hasPayment && (
+          <p className="mb-3 font-body text-xs text-on-surface-variant">
+            <span className="font-bold text-primary-lime">✓</span> significa que el anfitrión
+            confirmó el pago de ese jugador.
+          </p>
+        )}
         {confirmed.length === 0 ? (
           <p className="rounded-xl border border-dashed border-surface-variant px-4 py-8 text-center font-body text-on-surface-variant">
             Todavía nadie confirma.
@@ -410,12 +449,46 @@ export default async function MatchDetailPage(
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-body text-on-surface">
                     {p.user?.name ?? "Jugador"}
+                    {hasPayment && p.payment_confirmed_at && (
+                      <span
+                        title="Pago confirmado"
+                        className="ml-1.5 font-bold text-primary-lime"
+                      >
+                        ✓
+                      </span>
+                    )}
                   </span>
                   <span className="rounded-full bg-surface-variant px-2 py-0.5 font-label text-xs font-bold text-on-surface-variant">
                     {JOINED_VIA_LABELS[p.joined_via]}
                   </span>
+                  {hasPayment &&
+                    isOrganizer &&
+                    p.payment_reported_at &&
+                    !p.payment_confirmed_at && (
+                      <span className="rounded-full bg-secondary-container/30 px-2 py-0.5 font-label text-xs font-bold text-on-secondary-container">
+                        Pago por confirmar{p.payment_reference ? ` · ${p.payment_reference}` : ""}
+                      </span>
+                    )}
                 </span>
                 <span className="flex shrink-0 flex-wrap items-center gap-2">
+                  {hasPayment && isOrganizer && p.user?.id !== profile.id && (
+                    <MatchActionForm
+                      action={setPaymentConfirmed}
+                      hiddenFields={{
+                        participantId: p.id,
+                        matchId: match.id,
+                        confirmed: p.payment_confirmed_at ? "false" : "true",
+                      }}
+                      label={
+                        p.payment_confirmed_at
+                          ? "Desmarcar pago"
+                          : p.payment_reported_at
+                            ? "Confirmar pago"
+                            : "Marcar pagado"
+                      }
+                      className={SMALL_OUTLINE_BUTTON}
+                    />
+                  )}
                   {p.user?.id &&
                     p.user.id !== profile.id &&
                     (() => {
@@ -459,6 +532,18 @@ export default async function MatchDetailPage(
           </ul>
         )}
       </div>
+
+      {canSeeChat && (
+        <div className="mt-8">
+          <h2 className="mb-3 font-display text-lg font-bold text-on-surface">Chat del partido</h2>
+          <MatchChat
+            matchId={match.id}
+            currentUserId={profile.id}
+            initialMessages={chatMessages}
+            participantNames={participantNames}
+          />
+        </div>
+      )}
 
       {isOrganizer && match.status !== "cancelado" && (
         <div className="mt-8 flex flex-wrap gap-3">

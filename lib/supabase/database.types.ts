@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          match_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          match_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          match_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       court_events: {
         Row: {
           court_id: string
@@ -322,6 +361,9 @@ export type Database = {
           id: string
           joined_via: Database["public"]["Enums"]["joined_via_type"]
           match_id: string
+          payment_confirmed_at: string | null
+          payment_reference: string | null
+          payment_reported_at: string | null
           status: Database["public"]["Enums"]["participant_status"]
           user_id: string
         }
@@ -330,6 +372,9 @@ export type Database = {
           id?: string
           joined_via: Database["public"]["Enums"]["joined_via_type"]
           match_id: string
+          payment_confirmed_at?: string | null
+          payment_reference?: string | null
+          payment_reported_at?: string | null
           status?: Database["public"]["Enums"]["participant_status"]
           user_id: string
         }
@@ -338,6 +383,9 @@ export type Database = {
           id?: string
           joined_via?: Database["public"]["Enums"]["joined_via_type"]
           match_id?: string
+          payment_confirmed_at?: string | null
+          payment_reference?: string | null
+          payment_reported_at?: string | null
           status?: Database["public"]["Enums"]["participant_status"]
           user_id?: string
         }
@@ -591,6 +639,10 @@ export type Database = {
         Args: { p_court_id: string; p_type: string }
         Returns: undefined
       }
+      report_match_payment: {
+        Args: { p_match_id: string; p_reference: string }
+        Returns: undefined
+      }
       resolve_audience_subscriptions: {
         Args: { p_match_id: string; p_scope: string }
         Returns: {
@@ -599,6 +651,10 @@ export type Database = {
           p256dh: string
           subscription_id: string
         }[]
+      }
+      set_participant_payment_confirmed: {
+        Args: { p_confirmed: boolean; p_participant_id: string }
+        Returns: undefined
       }
       user_has_group_row: { Args: { p_group_id: string }; Returns: boolean }
       user_is_confirmed_in_match: {

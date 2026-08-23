@@ -20,7 +20,7 @@ function matchUrl(matchId: string): string {
   return `/partidos/${matchId}`;
 }
 
-function sportLabel(sport: string): string {
+export function sportLabel(sport: string): string {
   return SPORT_LABELS[sport] ?? sport;
 }
 
@@ -31,7 +31,7 @@ async function getCourtName(supabase: Client, courtId: string): Promise<string> 
 }
 
 /** Confirmed players of a match, minus whoever triggered the change. */
-async function getConfirmedUserIds(
+export async function getConfirmedUserIds(
   supabase: Client,
   matchId: string,
   excludeUserId: string

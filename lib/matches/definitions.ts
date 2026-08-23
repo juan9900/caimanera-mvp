@@ -35,6 +35,9 @@ const matchFieldsShape = {
     .date({ error: "Ingresa una fecha y hora válidas." })
     .refine((date) => date.getTime() > Date.now(), {
       error: "La fecha debe ser en el futuro.",
+    })
+    .refine((date) => date.getTime() <= Date.now() + 30 * 24 * 60 * 60 * 1000, {
+      error: "La fecha no puede ser más de 30 días en el futuro.",
     }),
   vibe: z.enum(["relajado", "competitivo"], {
     error: "Selecciona una vibra.",

@@ -11,7 +11,7 @@ const VISIBILITY_OPTIONS = [
 
 const VISIBILITY_HELP: Record<MatchVisibility, string> = {
   publica:
-    "Aparece en el inicio y en Partidos — cualquiera puede solicitar unirse y igual debes aprobar cada solicitud.",
+    "Aparece en el inicio y en Partidos — cualquiera puede solicitar unirse e igual debes aprobar cada solicitud.",
   amigos:
     "Solo tus amigos la ven, en su inicio — no aparece en Partidos ni para desconocidos. Igual debes aprobar cada solicitud.",
   privada:

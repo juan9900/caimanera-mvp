@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { login } from "@/app/actions/auth";
 
 export function LoginForm({ next }: { next?: string } = {}) {
   const [state, action, pending] = useActionState(login, undefined);
+  const [email, setEmail] = useState("");
 
   return (
     <form action={action} className="w-full max-w-sm space-y-4">
@@ -18,6 +19,8 @@ export function LoginForm({ next }: { next?: string } = {}) {
           id="email"
           name="email"
           type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           className="mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface focus:border-primary-lime focus:outline-none"
         />
         {state?.errors?.email && (

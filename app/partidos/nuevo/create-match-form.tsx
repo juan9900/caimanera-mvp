@@ -16,6 +16,11 @@ const INPUT_CLASSNAME =
   "mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface focus:border-primary-lime focus:outline-none";
 const LABEL_CLASSNAME = "block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant";
 
+function toDatetimeLocalValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function CreateMatchForm({
   courts,
   preferredSports,
@@ -32,7 +37,7 @@ export function CreateMatchForm({
   const [courtId, setCourtId] = useState(() => initialCourt?.id ?? "");
   const [visibility, setVisibility] = useState<MatchVisibility>("publica");
   const [notifyAudience, setNotifyAudience] = useState(false);
-  const [totalSlots, setTotalSlots] = useState(10);
+  const [totalSlots, setTotalSlots] = useState<number | "">(10);
   const [paymentAmountBs, setPaymentAmountBs] = useState("");
   const selectedCourt = useMemo(() => courts.find((c) => c.id === courtId), [courts, courtId]);
   const availableSports = useMemo(
@@ -42,9 +47,14 @@ export function CreateMatchForm({
   const mappableCourts = courts.filter((c) => c.lat != null && c.lng != null);
   const sortedCourts = sortCourtsForCreateMatchPicker(courts);
   const amountPerPerson =
-    paymentAmountBs && totalSlots > 0
+    paymentAmountBs && totalSlots
       ? Number(paymentAmountBs) / totalSlots
       : null;
+  const { min: minDatetime, max: maxDatetime } = useMemo(() => {
+    const now = new Date();
+    const max = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    return { min: toDatetimeLocalValue(now), max: toDatetimeLocalValue(max) };
+  }, []);
 
   /** Switching court resets the picked sport if the new court doesn't offer it. */
   function handleCourtChange(nextCourtId: string) {
@@ -149,6 +159,8 @@ export function CreateMatchForm({
           id="datetime"
           name="datetime"
           type="datetime-local"
+          min={minDatetime}
+          max={maxDatetime}
           className={INPUT_CLASSNAME}
         />
         {state?.errors?.datetime && (
@@ -167,7 +179,7 @@ export function CreateMatchForm({
           min={2}
           max={30}
           value={totalSlots}
-          onChange={(e) => setTotalSlots(Number(e.target.value))}
+          onChange={(e) => setTotalSlots(e.target.value === "" ? "" : Number(e.target.value))}
           className={INPUT_CLASSNAME}
         />
         {state?.errors?.totalSlots && (

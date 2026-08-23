@@ -405,9 +405,9 @@ export default async function MatchDetailPage(
             {confirmed.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-surface-variant/50 bg-surface-container px-4 py-3"
               >
-                <span className="flex items-center gap-2">
+                <span className="flex flex-wrap items-center gap-2">
                   <span className="font-body text-on-surface">
                     {p.user?.name ?? "Jugador"}
                   </span>
@@ -415,7 +415,7 @@ export default async function MatchDetailPage(
                     {JOINED_VIA_LABELS[p.joined_via]}
                   </span>
                 </span>
-                <span className="flex shrink-0 items-center gap-2">
+                <span className="flex shrink-0 flex-wrap items-center gap-2">
                   {p.user?.id &&
                     p.user.id !== profile.id &&
                     (() => {

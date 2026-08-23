@@ -8,7 +8,6 @@ import {
   getOutgoingFriendRequests,
   getMyGroups,
 } from "@/lib/auth/dal";
-import { CopyInviteLink } from "@/components/copy-invite-link";
 import { FriendSearch } from "@/components/friends/friend-search";
 import { MatchActionForm } from "@/components/match-action-form";
 import {
@@ -39,16 +38,6 @@ export default async function AmigosPage() {
         Cuando pides unirte a un partido, el organizador ve si eres amigo suyo
         o externo — pero siempre debe aprobar tu solicitud.
       </p>
-
-      <section className="mb-8">
-        <h2 className="mb-2 font-display text-lg font-bold text-on-surface">
-          Tu link de invitación
-        </h2>
-        <p className="mb-2 font-body text-sm text-on-surface-variant">
-          Es fijo y puedes compartirlo con quien quieras, las veces que quieras.
-        </p>
-        <CopyInviteLink path={`/signup?ref=${profile.referral_code}`} />
-      </section>
 
       <section className="mb-8">
         <h2 className="mb-2 font-display text-lg font-bold text-on-surface">

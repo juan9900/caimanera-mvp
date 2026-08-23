@@ -520,7 +520,6 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          invited_by: string | null
           is_admin: boolean
           location_label: string | null
           location_lat: number | null
@@ -530,7 +529,6 @@ export type Database = {
           onboarding_tour_completed: boolean
           phone: string | null
           photo_url: string | null
-          referral_code: string
           sport_preferences: string[]
           vibe: Database["public"]["Enums"]["vibe_type"]
           zone: string | null
@@ -538,7 +536,6 @@ export type Database = {
         Insert: {
           created_at?: string
           id: string
-          invited_by?: string | null
           is_admin?: boolean
           location_label?: string | null
           location_lat?: number | null
@@ -548,7 +545,6 @@ export type Database = {
           onboarding_tour_completed?: boolean
           phone?: string | null
           photo_url?: string | null
-          referral_code?: string
           sport_preferences?: string[]
           vibe?: Database["public"]["Enums"]["vibe_type"]
           zone?: string | null
@@ -556,7 +552,6 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          invited_by?: string | null
           is_admin?: boolean
           location_label?: string | null
           location_lat?: number | null
@@ -566,20 +561,11 @@ export type Database = {
           onboarding_tour_completed?: boolean
           phone?: string | null
           photo_url?: string | null
-          referral_code?: string
           sport_preferences?: string[]
           vibe?: Database["public"]["Enums"]["vibe_type"]
           zone?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "users_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

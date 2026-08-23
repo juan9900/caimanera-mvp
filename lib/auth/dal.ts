@@ -638,9 +638,7 @@ export async function requireAdmin(): Promise<Session> {
   return session;
 }
 
-export type AdminUser = UserProfile & {
-  inviter: { name: string | null } | null;
-};
+export type AdminUser = UserProfile;
 
 /** Fetches every user profile (admin-only; relies on RLS admin bypass), most recent first. */
 export const getAllUsers = cache(async (): Promise<AdminUser[]> => {
@@ -653,29 +651,7 @@ export const getAllUsers = cache(async (): Promise<AdminUser[]> => {
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (!users) return [];
-
-  const inviterIds = [
-    ...new Set(users.map((u) => u.invited_by).filter((id) => id !== null)),
-  ];
-
-  const inviterNames = new Map<string, string | null>();
-  if (inviterIds.length > 0) {
-    const { data: inviters } = await supabase
-      .from("users")
-      .select("id, name")
-      .in("id", inviterIds);
-    for (const inviter of inviters ?? []) {
-      inviterNames.set(inviter.id, inviter.name);
-    }
-  }
-
-  return users.map((user) => ({
-    ...user,
-    inviter: user.invited_by
-      ? { name: inviterNames.get(user.invited_by) ?? null }
-      : null,
-  }));
+  return users ?? [];
 });
 
 /** Fetches every match regardless of status/visibility (admin-only; relies on RLS admin bypass). */

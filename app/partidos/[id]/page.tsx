@@ -40,7 +40,7 @@ const STATUS_LABELS: Record<string, string> = {
   vencido: "Vencido",
 };
 const JOINED_VIA_LABELS: Record<string, string> = {
-  red_directa: "Red directa",
+  red_directa: "Amigo",
   externo: "Externo",
 };
 

@@ -2,10 +2,6 @@ import * as z from "zod";
 import { SPORT_CATALOG_KEYS } from "@/lib/courts/sports";
 
 export const SignupFormSchema = z.object({
-  inviteCode: z
-    .string()
-    .trim()
-    .min(1, { error: "Ingresa tu código de invitación." }),
   email: z.email({ error: "Ingresa un email válido." }).trim(),
   password: z
     .string()
@@ -17,7 +13,6 @@ export const SignupFormSchema = z.object({
 export type SignupFormState =
   | {
       errors?: {
-        inviteCode?: string[];
         email?: string[];
         password?: string[];
       };

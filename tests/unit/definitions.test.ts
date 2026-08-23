@@ -9,7 +9,6 @@ import { CreateMatchFormSchema } from "@/lib/matches/definitions";
 describe("SignupFormSchema", () => {
   it("accepts a valid signup payload", () => {
     const result = SignupFormSchema.safeParse({
-      inviteCode: "ABC123",
       email: "juan@example.com",
       password: "abc12345",
     });
@@ -17,19 +16,8 @@ describe("SignupFormSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects a missing invite code", () => {
-    const result = SignupFormSchema.safeParse({
-      inviteCode: "",
-      email: "juan@example.com",
-      password: "abc12345",
-    });
-
-    expect(result.success).toBe(false);
-  });
-
   it("rejects a weak password", () => {
     const result = SignupFormSchema.safeParse({
-      inviteCode: "ABC123",
       email: "juan@example.com",
       password: "onlyletters",
     });

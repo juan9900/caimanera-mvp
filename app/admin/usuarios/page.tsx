@@ -41,8 +41,7 @@ export default async function AdminUsuariosPage() {
                 )}
               </p>
               <p className="text-sm text-zinc-500">
-                {new Date(user.created_at).toLocaleDateString("es-VE", { dateStyle: "medium" })} ·
-                invitado por {user.inviter?.name ?? "fundador"}
+                {new Date(user.created_at).toLocaleDateString("es-VE", { dateStyle: "medium" })}
               </p>
             </li>
           ))}

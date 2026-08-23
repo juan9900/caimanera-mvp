@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { signup } from "@/app/actions/auth";
 
-export function SignupForm({ defaultInviteCode }: { defaultInviteCode?: string }) {
+export function SignupForm() {
   const [state, action, pending] = useActionState(signup, undefined);
   // Controlled (not defaultValue) so a failed submit — e.g. invalid password —
   // doesn't wipe the email the user already typed: React resets uncontrolled
@@ -45,22 +45,6 @@ export function SignupForm({ defaultInviteCode }: { defaultInviteCode?: string }
 
   return (
     <form action={action} className="w-full max-w-sm space-y-4">
-      <div>
-        <label htmlFor="inviteCode" className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-          Código de invitación
-        </label>
-        <input
-          id="inviteCode"
-          name="inviteCode"
-          defaultValue={defaultInviteCode}
-          placeholder="Ej: a1b2c3d4"
-          className="mt-1 w-full rounded-lg border border-surface-variant bg-surface-container px-3 py-2 font-body text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary-lime focus:outline-none"
-        />
-        {state?.errors?.inviteCode && (
-          <p className="mt-1 font-body text-sm text-dark-error">{state.errors.inviteCode[0]}</p>
-        )}
-      </div>
-
       <div>
         <label htmlFor="email" className="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">
           Email

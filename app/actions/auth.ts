@@ -19,7 +19,6 @@ export async function signup(
   formData: FormData
 ): Promise<SignupFormState> {
   const validatedFields = SignupFormSchema.safeParse({
-    inviteCode: formData.get("inviteCode"),
     email: formData.get("email"),
     password: formData.get("password"),
   });
@@ -28,7 +27,7 @@ export async function signup(
     return { errors: validatedFields.error.flatten().fieldErrors };
   }
 
-  const { inviteCode, email, password } = validatedFields.data;
+  const { email, password } = validatedFields.data;
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
@@ -36,7 +35,6 @@ export async function signup(
     email,
     password,
     options: {
-      data: { invite_code: inviteCode },
       emailRedirectTo: origin ? `${origin}/auth/confirm?next=/onboarding` : undefined,
     },
   });
@@ -154,9 +152,6 @@ export async function updatePassword(
 }
 
 function translateAuthError(message: string): string {
-  if (message.includes("invitación") || message.includes("invitation")) {
-    return message;
-  }
   if (message.includes("already registered")) {
     return "Ya existe una cuenta con ese email.";
   }

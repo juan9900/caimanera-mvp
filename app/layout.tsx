@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Anybody, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { verifySession } from "@/lib/auth/dal";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { SiteHeader } from "@/components/site-header";
 import { BottomNav } from "@/components/bottom-nav";
@@ -49,13 +50,15 @@ export const viewport: Viewport = {
   themeColor: "#16a34a",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const session = await verifySession();
+
   return (
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} ${anybody.variable} ${hankenGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col pb-20">
+      <body className={`min-h-full flex flex-col ${session ? "pb-20" : ""}`}>
         <SiteHeader />
         {children}
         <BottomNav />

@@ -61,7 +61,7 @@ export function LoginForm({ next }: { next?: string } = {}) {
       <p className="text-center font-body text-sm text-on-surface-variant">
         ¿No tienes cuenta?{" "}
         <Link href="/signup" className="text-primary-lime underline">
-          Regístrate con invitación
+          Regístrate
         </Link>
       </p>
     </form>

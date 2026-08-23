@@ -91,6 +91,18 @@ export function BottomNavInner({ invitationCount }: { invitationCount: number })
     };
   }, [router]);
 
+  // The app is server-rendered per route (Server Components reading the DAL),
+  // so returning from the background (or another tab) leaves stale data on
+  // screen until the user navigates away and back. Refresh whenever the app
+  // becomes visible again to pick up changes made while it was backgrounded.
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [router]);
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-outline-variant/50 bg-surface-container/90 pb-safe backdrop-blur-xl">
       <div className="relative flex h-20 items-center justify-between px-4">

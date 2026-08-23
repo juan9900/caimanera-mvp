@@ -32,6 +32,11 @@ self.addEventListener("notificationclick", (event) => {
   // Reuse an already-open window instead of just focusing it — a PWA left
   // open on the home screen would otherwise "open" the notification's link
   // by focusing the home tab without ever navigating it anywhere.
+  //
+  // `client.navigate()` is unreliable for clients the SW doesn't control
+  // (common on iOS PWAs and windows opened before the SW took control), so
+  // instead of navigating directly we postMessage the page and let the app's
+  // own router handle it — falling back to openWindow when nothing is open.
   event.waitUntil(
     (async () => {
       const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
@@ -39,14 +44,7 @@ self.addEventListener("notificationclick", (event) => {
       for (const client of clients) {
         if (!("focus" in client)) continue;
         await client.focus();
-        if ("navigate" in client) {
-          try {
-            await client.navigate(url);
-          } catch {
-            // Cross-origin or otherwise unnavigable; the focused tab is
-            // still better than nothing.
-          }
-        }
+        client.postMessage({ type: "navigate", url });
         return;
       }
 

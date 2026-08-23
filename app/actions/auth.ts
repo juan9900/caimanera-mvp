@@ -45,6 +45,16 @@ export async function signup(
     return { message: translateAuthError(error.message) };
   }
 
+  // Con "email enumeration protection" activada, un email ya registrado no
+  // produce error: Supabase devuelve un usuario ofuscado con identities
+  // vacías y reenvía un correo. Lo tratamos como cuenta existente (una sola
+  // cuenta por correo).
+  if (data.user && (data.user.identities?.length ?? 0) === 0) {
+    return {
+      message: "Ya existe una cuenta con ese email. Inicia sesión o restablece tu contraseña.",
+    };
+  }
+
   if (!data.session) {
     return {
       success: true,

@@ -26,6 +26,7 @@ import { ShareMatchButton } from "@/components/share-match-button";
 import { MatchActionForm } from "@/components/match-action-form";
 import { MatchVisibilitySwitch } from "@/components/matches/match-visibility-switch";
 import { InvitePlayers } from "@/components/matches/invite-players";
+import { AddFriendButton } from "@/components/friends/add-friend-button";
 import { SPORT_LABELS } from "@/lib/matches/home";
 
 const VIBE_LABELS: Record<string, string> = {
@@ -86,6 +87,11 @@ export default async function MatchDetailPage(
         getGroupRelations(pendingUserIds),
       ])
     : [new Map<string, string>(), new Set<string>()];
+
+  const confirmedUserIds = confirmed
+    .map((p) => p.user?.id)
+    .filter((id): id is string => Boolean(id) && id !== profile.id);
+  const confirmedFriendRelations = await getFriendRelations(confirmedUserIds);
 
   function relationBadge(userId: string | undefined, joinedVia: string): string {
     if (userId && pendingFriendRelations.get(userId) === "amigos") return "Amigo";
@@ -409,17 +415,45 @@ export default async function MatchDetailPage(
                     {JOINED_VIA_LABELS[p.joined_via]}
                   </span>
                 </span>
-                {isOrganizer && p.user?.id !== profile.id && (
-                  <MatchActionForm
-                    action={removeParticipant}
-                    hiddenFields={{
-                      participantId: p.id,
-                      matchId: match.id,
-                    }}
-                    label="Quitar"
-                    className="font-label text-xs font-bold text-dark-error hover:underline disabled:opacity-50"
-                  />
-                )}
+                <span className="flex shrink-0 items-center gap-2">
+                  {p.user?.id &&
+                    p.user.id !== profile.id &&
+                    (() => {
+                      const relation = confirmedFriendRelations.get(p.user.id);
+                      if (relation === "pendiente_enviada") {
+                        return (
+                          <span className="font-label text-xs font-bold text-on-surface-variant">
+                            Solicitud enviada
+                          </span>
+                        );
+                      }
+                      if (relation === "pendiente_recibida") {
+                        return (
+                          <Link
+                            href="/amigos"
+                            className="font-label text-xs font-bold text-primary-lime underline"
+                          >
+                            Te envió solicitud
+                          </Link>
+                        );
+                      }
+                      if (relation !== "amigos") {
+                        return <AddFriendButton userId={p.user.id} />;
+                      }
+                      return null;
+                    })()}
+                  {isOrganizer && p.user?.id !== profile.id && (
+                    <MatchActionForm
+                      action={removeParticipant}
+                      hiddenFields={{
+                        participantId: p.id,
+                        matchId: match.id,
+                      }}
+                      label="Quitar"
+                      className="font-label text-xs font-bold text-dark-error hover:underline disabled:opacity-50"
+                    />
+                  )}
+                </span>
               </li>
             ))}
           </ul>

@@ -45,7 +45,7 @@ export function CourtPickerMapInner({
           })}
           eventHandlers={{ click: () => onSelect(court.id) }}
         >
-          <Popup>
+          <Popup autoPan={false}>
             <CourtPopupContent name={court.name} sports={court.sports} official={court.is_official} />
           </Popup>
         </Marker>

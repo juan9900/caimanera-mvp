@@ -127,6 +127,10 @@ Regla de negocio clave que se repite en el código: **nunca hay pagos dentro de 
 
 **Suscripción (cliente).** El usuario activa el toggle en `components/enable-notifications.tsx`
 → `subscribeToPush()` (`lib/push/subscribe-client.ts`) → la action `savePushSubscription`.
+Si el toggle está desactivado (`getPushSubscriptionStatus()` devuelve `disabled`/`denied`),
+`components/home/notifications-banner.tsx` muestra un aviso permanente debajo del carrusel de
+canchas oficiales en el Home, que enlaza a `/perfil#notificaciones` (id agregado en
+`notification-preferences.tsx`) para activarlas desde ahí.
 `Notification.requestPermission()` es lo **primero** que corre y tiene que
 llamarse desde un gesto del usuario: iOS solo muestra el prompt nativo mientras
 la página conserva user activation, y cualquier `await` previo lo pierde. Por eso

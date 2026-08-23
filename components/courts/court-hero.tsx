@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
 import { ArrowLeft, BadgeCheck, MapPin } from "lucide-react";
 import { RatingStars } from "@/components/courts/rating-stars";
+import { BackLink } from "@/components/back-link";
 
 /**
  * Full-bleed photo hero for an official court's detail page — the premium
@@ -52,13 +52,13 @@ export function CourtHero({
 
       <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/20 to-transparent" />
 
-      <Link
-        href="/mapa"
+      <BackLink
+        fallbackHref="/mapa"
         className="absolute left-4 top-4 flex items-center gap-1 rounded-full bg-surface/60 px-3 py-1.5 font-body text-sm text-on-surface backdrop-blur-sm active:scale-[0.98]"
       >
         <ArrowLeft aria-hidden size={16} />
         Volver
-      </Link>
+      </BackLink>
 
       <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 px-4 pb-4">
         <div className="flex flex-wrap items-center gap-2">

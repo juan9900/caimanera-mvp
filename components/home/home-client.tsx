@@ -17,6 +17,7 @@ import {
 } from "@/lib/matches/home";
 import type { MatchInvitation, Court, UserLocation } from "@/lib/auth/dal";
 import { FeaturedCourtsCarousel } from "@/components/home/featured-courts-carousel";
+import { NotificationsBanner } from "@/components/home/notifications-banner";
 import { NearbyMapCard } from "@/components/home/nearby-map-card";
 import { InvitationsSection } from "@/components/home/invitations-section";
 import { FriendsMatches } from "@/components/home/friends-matches";
@@ -143,6 +144,8 @@ export function HomeClient({
       </div>
 
       <FeaturedCourtsCarousel courts={featuredCourts} distanceByCourtId={distanceByCourtId} />
+
+      <NotificationsBanner />
 
       <NearbyMapCard courts={allCourts} userLocation={userLocation} preferredSports={preferredSports} />
 

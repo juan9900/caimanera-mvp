@@ -36,7 +36,7 @@ export function CourtsMapInner({
           position={[court.lat, court.lng]}
           icon={buildCourtIcon(court.sports, { official: court.is_official, preferredSports })}
         >
-          <Popup>
+          <Popup autoPan={false}>
             <CourtPopupContent
               name={court.name}
               sports={court.sports}

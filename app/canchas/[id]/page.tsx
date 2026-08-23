@@ -12,6 +12,7 @@ import { RatingStars } from "@/components/courts/rating-stars";
 import { RateCourt } from "@/components/courts/rate-court";
 import { getSport, SportIcon } from "@/lib/courts/sports";
 import { formatTodayHours } from "@/lib/courts/hours";
+import { BackLink } from "@/components/back-link";
 
 function isSponsored(court: { sponsored_until: string | null }): boolean {
   return court.sponsored_until != null && new Date(court.sponsored_until) > new Date();
@@ -170,13 +171,13 @@ export default async function CourtDetailPage(
 
   return (
     <div className="flex flex-1 flex-col bg-surface px-4 py-6 text-on-surface">
-      <Link
-        href="/mapa"
+      <BackLink
+        fallbackHref="/mapa"
         className="mb-4 inline-flex items-center gap-1 font-body text-sm text-on-surface-variant hover:text-primary-lime"
       >
         <ArrowLeft aria-hidden size={16} />
-        Volver al mapa
-      </Link>
+        Volver
+      </BackLink>
 
       <div className="mb-4 flex items-center gap-3">
         {court.logo_url && (

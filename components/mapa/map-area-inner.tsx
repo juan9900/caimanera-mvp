@@ -98,7 +98,7 @@ export function MapAreaInner({
           })}
           eventHandlers={{ click: () => onSelect(court.id) }}
         >
-          <Popup>
+          <Popup autoPan={false}>
             <CourtPopupContent
               name={court.name}
               address={court.address}

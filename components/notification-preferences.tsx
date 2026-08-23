@@ -46,7 +46,10 @@ export function NotificationPreferences({
   }
 
   return (
-    <section className="rounded-2xl border border-surface-variant/50 bg-surface-container p-5">
+    <section
+      id="notificaciones"
+      className="rounded-2xl border border-surface-variant/50 bg-surface-container p-5 scroll-mt-20"
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-lime/10 text-primary-lime">

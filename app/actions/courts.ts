@@ -1,12 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/auth/dal";
+import { revalidatePath } from "next/cache";
+import { requireAdmin, requireSession } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import {
   AddCourtFormSchema,
+  AddPendingCourtFormSchema,
   EditCourtFormSchema,
   type AddCourtFormState,
+  type AddPendingCourtFormState,
   type EditCourtFormState,
 } from "@/lib/courts/definitions";
 
@@ -26,6 +29,7 @@ function readCourtFormData(formData: FormData) {
     amenities: formData.getAll("amenities"),
     sports: formData.getAll("sports"),
     isOfficial: formData.get("isOfficial") === "true",
+    isPublic: formData.get("isPublic") === "true",
     sponsoredUntil: formData.get("sponsoredUntil"),
     sponsorPriority: formData.get("sponsorPriority"),
     promoText: formData.get("promoText"),
@@ -54,6 +58,7 @@ function toCourtRow(fields: CourtFormFields) {
     amenities: fields.amenities,
     sports: fields.sports,
     is_official: fields.isOfficial,
+    is_public: fields.isPublic,
     sponsored_until: fields.sponsoredUntil ? new Date(fields.sponsoredUntil).toISOString() : null,
     sponsor_priority: fields.sponsorPriority,
     promo_text: fields.promoText || null,
@@ -118,4 +123,80 @@ export async function updateCourt(
   }
 
   redirect(`/admin/canchas`);
+}
+
+/**
+ * Any signed-in user can add a place that isn't in the catalog — name + a
+ * point picked on the map. It's created right away as a court with
+ * `verified: false`, usable immediately by its creator (e.g. to pick it for
+ * a match), but hidden from everyone else's map/pickers until an admin
+ * verifies it in `/admin/sugerencias`. Returns the created court so the
+ * caller can select it without a round-trip refetch.
+ */
+export async function createPendingCourt(
+  _state: AddPendingCourtFormState,
+  formData: FormData
+): Promise<AddPendingCourtFormState> {
+  const session = await requireSession();
+
+  const validatedFields = AddPendingCourtFormSchema.safeParse({
+    name: formData.get("name"),
+    lat: formData.get("lat"),
+    lng: formData.get("lng"),
+    reference: formData.get("reference"),
+  });
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("courts")
+    .insert({
+      name: validatedFields.data.name,
+      lat: validatedFields.data.lat,
+      lng: validatedFields.data.lng,
+      address: validatedFields.data.reference || null,
+      sports: [],
+      is_official: false,
+      is_public: true,
+      verified: false,
+      added_by: session.userId,
+    })
+    .select("id, name, lat, lng, sports")
+    .single();
+
+  if (error || !data) {
+    return { message: "No se pudo agregar el lugar. Intenta de nuevo." };
+  }
+
+  return {
+    success: true,
+    message: "¡Listo! Ya puedes usar este lugar. Un admin lo verificará pronto.",
+    court: data,
+  };
+}
+
+/** Admin-only: marks a user-added pending court as verified, making it visible to everyone. */
+export async function verifyCourt(courtId: string) {
+  await requireAdmin();
+
+  const supabase = await createClient();
+
+  await supabase.from("courts").update({ verified: true }).eq("id", courtId);
+
+  revalidatePath("/admin/sugerencias");
+}
+
+/** Admin-only: removes a pending (unverified) court, e.g. a duplicate or bad submission. */
+export async function deletePendingCourt(courtId: string) {
+  await requireAdmin();
+
+  const supabase = await createClient();
+
+  await supabase.from("courts").delete().eq("id", courtId).eq("verified", false);
+
+  revalidatePath("/admin/sugerencias");
 }

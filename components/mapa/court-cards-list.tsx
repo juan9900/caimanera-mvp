@@ -76,6 +76,11 @@ export function CourtCardsList({
                     Oficial
                   </span>
                 )}
+                {!court.is_official && court.is_public && (
+                  <span className="shrink-0 rounded-full bg-primary-lime/90 px-2 py-0.5 font-label text-[10px] font-bold text-on-primary">
+                    Lugar público
+                  </span>
+                )}
               </div>
 
               {court.address && (

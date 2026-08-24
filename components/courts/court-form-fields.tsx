@@ -28,6 +28,7 @@ export function CourtSponsorshipFields({
     amenities?: string[];
     sports?: string[];
     isOfficial?: boolean;
+    isPublic?: boolean;
     sponsoredUntil?: string | null;
     sponsorPriority?: number;
     promoText?: string | null;
@@ -150,6 +151,17 @@ export function CourtSponsorshipFields({
           className="rounded border-zinc-300 text-green-600 focus:ring-green-600"
         />
         Cancha verificada (badge &quot;Oficial&quot;)
+      </label>
+
+      <label className="flex items-center gap-2 text-sm text-zinc-700">
+        <input
+          type="checkbox"
+          name="isPublic"
+          value="true"
+          defaultChecked={defaultValues?.isPublic ?? false}
+          className="rounded border-zinc-300 text-green-600 focus:ring-green-600"
+        />
+        Lugar público (cancha gratuita/abierta, badge &quot;Lugar público&quot;)
       </label>
 
       <fieldset className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-3">

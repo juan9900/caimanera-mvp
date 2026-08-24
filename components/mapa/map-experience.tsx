@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, LocateFixed, Search } from "lucide-react";
+import { ArrowLeft, LocateFixed, MapPinPlus, Search } from "lucide-react";
 import { SPORTS, getSport } from "@/lib/courts/sports";
 import { sortCourtsForCreateMatchPicker } from "@/lib/courts/sort";
 import { haversineKm, formatDistance } from "@/lib/geo/distance";
@@ -11,6 +11,7 @@ import type { Court, UserLocation } from "@/lib/auth/dal";
 import { setUserLocation } from "@/app/actions/location";
 import { LocationSelector } from "@/components/location/location-selector";
 import { SportChip } from "@/components/courts/sport-chip";
+import { AddPlaceInline } from "@/components/courts/suggest-court-form";
 import { MapArea } from "@/components/mapa/map-area";
 import type { MapFocusTarget, MapViewBounds } from "@/components/mapa/map-area-inner";
 import { CourtDrawer } from "@/components/mapa/court-drawer";
@@ -49,6 +50,8 @@ export function MapExperience({
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [addPlaceOpen, setAddPlaceOpen] = useState(false);
+  const [addPlaceInitialName, setAddPlaceInitialName] = useState<string | undefined>(undefined);
   const [locating, startLocating] = useTransition();
   // Keyed by `centerKey` (below) so a remounted map (new `center`) doesn't
   // briefly filter against the previous view's now-stale bounds.
@@ -220,6 +223,26 @@ export function MapExperience({
               ))}
             </ul>
           )}
+
+          {suggestionsOpen && search.trim() && suggestions.length === 0 && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border border-outline-variant/50 bg-surface-container p-3 shadow-xl">
+              <p className="font-body text-sm text-on-surface-variant">
+                No encontramos &quot;{search.trim()}&quot;.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSuggestionsOpen(false);
+                  setAddPlaceInitialName(search.trim());
+                  setAddPlaceOpen(true);
+                }}
+                className="mt-2 inline-flex items-center gap-1.5 font-label text-xs font-bold uppercase tracking-wide text-primary-lime"
+              >
+                <MapPinPlus aria-hidden size={14} />
+                Agregar este lugar
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -276,6 +299,31 @@ export function MapExperience({
         >
           <LocateFixed aria-hidden size={18} className={locating ? "animate-pulse" : undefined} />
         </button>
+
+        <button
+          type="button"
+          onClick={() => setAddPlaceOpen((v) => !v)}
+          aria-label="¿No aparece tu lugar? Agrégalo"
+          title="¿No aparece tu lugar? Agrégalo"
+          aria-expanded={addPlaceOpen}
+          className="absolute right-3 top-16 flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-primary-lime shadow-md"
+        >
+          <MapPinPlus aria-hidden size={18} />
+        </button>
+
+        {addPlaceOpen && (
+          <div className="absolute inset-x-3 top-3 z-40 max-h-[calc(100%-2rem)] overflow-y-auto">
+            <AddPlaceInline
+              open
+              initialName={addPlaceInitialName}
+              onOpenChange={(v) => setAddPlaceOpen(v)}
+              onCreated={() => {
+                setAddPlaceOpen(false);
+                router.refresh();
+              }}
+            />
+          </div>
+        )}
 
         <CourtDrawer
           courts={filtered}

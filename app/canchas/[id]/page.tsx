@@ -59,6 +59,7 @@ export default async function CourtDetailPage(
           ratingAvg={court.rating_avg}
           ratingCount={court.rating_count}
           sponsored={sponsored}
+          isPublic={court.is_public}
         />
 
         <div className="mt-4 flex flex-col gap-6">
@@ -196,6 +197,11 @@ export default async function CourtDetailPage(
             {sponsored && (
               <span className="rounded-full bg-secondary-container/30 px-2 py-0.5 font-label text-xs font-bold text-primary-lime">
                 Patrocinado
+              </span>
+            )}
+            {court.is_public && (
+              <span className="rounded-full bg-primary-lime/90 px-2 py-0.5 font-label text-xs font-bold text-on-primary">
+                Lugar público
               </span>
             )}
           </div>

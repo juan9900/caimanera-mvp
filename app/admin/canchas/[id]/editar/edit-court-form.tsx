@@ -110,6 +110,7 @@ export function EditCourtForm({ court }: { court: Court }) {
           amenities: court.amenities,
           sports: court.sports,
           isOfficial: court.is_official,
+          isPublic: court.is_public,
           sponsoredUntil: court.sponsored_until,
           sponsorPriority: court.sponsor_priority,
           promoText: court.promo_text,

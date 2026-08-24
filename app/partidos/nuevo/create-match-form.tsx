@@ -6,8 +6,10 @@ import { createMatch } from "@/app/actions/matches";
 import { CourtPickerMap } from "@/components/court-picker-map";
 import { CourtPicker } from "@/components/courts/court-picker";
 import { SportChip } from "@/components/courts/sport-chip";
+import { AddPlaceInline } from "@/components/courts/suggest-court-form";
 import { VisibilityToggle } from "@/components/matches/visibility-toggle";
 import type { Court } from "@/lib/auth/dal";
+import { pendingCourtToCourt } from "@/lib/courts/definitions";
 import { BANK_OPTIONS, type MatchVisibility } from "@/lib/matches/definitions";
 import { SPORTS } from "@/lib/courts/sports";
 import { sortCourtsForCreateMatchPicker } from "@/lib/courts/sort";
@@ -35,17 +37,26 @@ export function CreateMatchForm({
     () => initialCourt?.sports?.find((s) => SPORTS.some((sp) => sp.key === s)) ?? "",
   );
   const [courtId, setCourtId] = useState(() => initialCourt?.id ?? "");
+  const [allCourts, setAllCourts] = useState(courts);
+  const [addPlaceOpen, setAddPlaceOpen] = useState(false);
   const [visibility, setVisibility] = useState<MatchVisibility>("publica");
   const [notifyAudience, setNotifyAudience] = useState(false);
   const [totalSlots, setTotalSlots] = useState<number | "">(10);
   const [paymentAmountBs, setPaymentAmountBs] = useState("");
-  const selectedCourt = useMemo(() => courts.find((c) => c.id === courtId), [courts, courtId]);
+  const selectedCourt = useMemo(() => allCourts.find((c) => c.id === courtId), [allCourts, courtId]);
+  // A place a user just added (`createPendingCourt`) has no sports yet, so
+  // fall back to the full catalog rather than leaving the picker empty.
   const availableSports = useMemo(
-    () => SPORTS.filter((s) => selectedCourt?.sports?.includes(s.key)),
+    () =>
+      selectedCourt?.sports && selectedCourt.sports.length > 0
+        ? SPORTS.filter((s) => selectedCourt.sports?.includes(s.key))
+        : selectedCourt
+          ? SPORTS
+          : [],
     [selectedCourt],
   );
-  const mappableCourts = courts.filter((c) => c.lat != null && c.lng != null);
-  const sortedCourts = sortCourtsForCreateMatchPicker(courts);
+  const mappableCourts = allCourts.filter((c) => c.lat != null && c.lng != null);
+  const sortedCourts = sortCourtsForCreateMatchPicker(allCourts);
   const amountPerPerson =
     paymentAmountBs && totalSlots
       ? Number(paymentAmountBs) / totalSlots
@@ -59,10 +70,20 @@ export function CreateMatchForm({
   /** Switching court resets the picked sport if the new court doesn't offer it. */
   function handleCourtChange(nextCourtId: string) {
     setCourtId(nextCourtId);
-    const nextCourt = courts.find((c) => c.id === nextCourtId);
+    const nextCourt = allCourts.find((c) => c.id === nextCourtId);
     if (!nextCourt?.sports?.includes(sport)) {
       setSport(nextCourt?.sports?.find((s) => SPORTS.some((sp) => sp.key === s)) ?? "");
     }
+  }
+
+  /** A newly added place (still pending verification) is inserted locally
+   * and selected right away, so it's usable for this match without a
+   * round-trip refetch — see `AddPlaceInline` / `createPendingCourt`. */
+  function handlePlaceCreated(court: { id: string; name: string; lat: number; lng: number; sports: string[] }) {
+    setAllCourts((prev) => [...prev, pendingCourtToCourt(court)]);
+    setCourtId(court.id);
+    setSport("");
+    setAddPlaceOpen(false);
   }
 
   return (
@@ -107,7 +128,10 @@ export function CreateMatchForm({
             Todavía no hay canchas cargadas.
           </p>
         ) : (
-          <>
+          <div
+            className={addPlaceOpen ? "pointer-events-none opacity-50" : undefined}
+            aria-disabled={addPlaceOpen}
+          >
             {mappableCourts.length > 0 && (
               <div className="mt-1 mb-3">
                 <CourtPickerMap
@@ -125,11 +149,14 @@ export function CreateMatchForm({
             <div className="mt-1">
               <CourtPicker courts={sortedCourts} selectedId={courtId} onSelect={handleCourtChange} />
             </div>
-          </>
+          </div>
         )}
         {state?.errors?.courtId && (
           <p className="mt-1 font-body text-sm text-dark-error">{state.errors.courtId[0]}</p>
         )}
+        <div className="mt-3">
+          <AddPlaceInline open={addPlaceOpen} onOpenChange={setAddPlaceOpen} onCreated={handlePlaceCreated} />
+        </div>
       </div>
 
       <div>

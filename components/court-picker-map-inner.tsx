@@ -11,6 +11,7 @@ export type CourtPickerMarker = {
   lng: number;
   sports?: string[] | null;
   is_official?: boolean;
+  is_public?: boolean;
 };
 
 export function CourtPickerMapInner({
@@ -41,12 +42,18 @@ export function CourtPickerMapInner({
           icon={buildCourtIcon(court.sports, {
             selected: court.id === selectedId,
             official: court.is_official,
+            public: court.is_public,
             preferredSports,
           })}
           eventHandlers={{ click: () => onSelect(court.id) }}
         >
           <Popup autoPan={false}>
-            <CourtPopupContent name={court.name} sports={court.sports} official={court.is_official} />
+            <CourtPopupContent
+              name={court.name}
+              sports={court.sports}
+              official={court.is_official}
+              isPublic={court.is_public}
+            />
           </Popup>
         </Marker>
       ))}

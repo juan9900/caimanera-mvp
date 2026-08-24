@@ -4,11 +4,19 @@ import { useActionState } from "react";
 import { createCourt } from "@/app/actions/courts";
 import { CourtSponsorshipFields } from "@/components/courts/court-form-fields";
 
-export function AddCourtForm() {
+export function AddCourtForm({
+  initialValues,
+  suggestionId,
+}: {
+  initialValues?: { name?: string; lat?: string; lng?: string };
+  suggestionId?: string;
+}) {
   const [state, action, pending] = useActionState(createCourt, undefined);
 
   return (
     <form action={action} className="w-full space-y-5">
+      {suggestionId && <input type="hidden" name="suggestionId" value={suggestionId} />}
+
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-zinc-700">
           Nombre
@@ -16,6 +24,7 @@ export function AddCourtForm() {
         <input
           id="name"
           name="name"
+          defaultValue={initialValues?.name ?? ""}
           placeholder="Ej: Cancha Los Haticos"
           className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
         />
@@ -34,6 +43,7 @@ export function AddCourtForm() {
             name="lat"
             type="number"
             step="any"
+            defaultValue={initialValues?.lat ?? ""}
             placeholder="10.6316"
             className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
           />
@@ -51,6 +61,7 @@ export function AddCourtForm() {
             name="lng"
             type="number"
             step="any"
+            defaultValue={initialValues?.lng ?? ""}
             placeholder="-71.6444"
             className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 focus:border-green-600 focus:outline-none"
           />

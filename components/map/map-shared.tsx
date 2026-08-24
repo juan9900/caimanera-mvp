@@ -3,7 +3,7 @@
 import { TileLayer } from "react-leaflet";
 import L from "leaflet";
 import Link from "next/link";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, MapPinned } from "lucide-react";
 import { getSport, SportIcon } from "@/lib/courts/sports";
 import { renderIconSvg, renderIconSource } from "@/lib/icons/svg-icon";
 import { RatingStars } from "@/components/courts/rating-stars";
@@ -76,6 +76,18 @@ const OFFICIAL_BADGE_GLYPH = renderIconSvg(
   { size: 11, color: "currentColor", strokeWidth: 2.5 },
 );
 
+// Lucide `globe` glyph — used for the "Lugar público" pin badge and popup
+// chip, distinct from the `badge-check` "Oficial" glyph so the two signals
+// (verified partner vs. free/open place) don't read as the same thing.
+const PUBLIC_BADGE_GLYPH = renderIconSvg(
+  [
+    ["circle", { cx: "12", cy: "12", r: "10" }],
+    ["path", { d: "M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" }],
+    ["path", { d: "M2 12h20" }],
+  ],
+  { size: 11, color: "currentColor", strokeWidth: 2.5 },
+);
+
 /**
  * Dark pin with lime glyphs inside: a court's sport icon(s), prioritizing
  * the viewer's favorite sports (`opts.preferredSports`, from
@@ -83,14 +95,17 @@ const OFFICIAL_BADGE_GLYPH = renderIconSvg(
  * to a generic location pin; one sport is a round badge with its icon;
  * two or more render as a horizontal pill of up to `MAX_PIN_SPORTS` icons,
  * plus a "+N" tail when the court offers more than that. Official courts
- * get a small "verified" badge on the corner of the pin. Used by every
- * court marker in the app (display maps, picker, home card, `/mapa`).
+ * get a small "verified" badge on the corner of the pin, and public places
+ * (free/open courts) get a "globe" badge instead — official takes priority
+ * if a court is somehow both, so the pin never has to stack two badges.
+ * Used by every court marker in the app (display maps, picker, home card,
+ * `/mapa`).
  */
 export function buildCourtIcon(
   sports: string[] | null | undefined,
-  opts: { selected?: boolean; official?: boolean; preferredSports?: string[] } = {},
+  opts: { selected?: boolean; official?: boolean; public?: boolean; preferredSports?: string[] } = {},
 ): L.DivIcon {
-  const key = `${(sports ?? []).join(",")}|${(opts.preferredSports ?? []).join(",")}|${opts.selected ? "sel" : ""}|${opts.official ? "off" : ""}`;
+  const key = `${(sports ?? []).join(",")}|${(opts.preferredSports ?? []).join(",")}|${opts.selected ? "sel" : ""}|${opts.official ? "off" : ""}|${opts.public ? "pub" : ""}`;
   const cached = iconCache.get(key);
   if (cached) return cached;
 
@@ -100,7 +115,9 @@ export function buildCourtIcon(
 
   const badge = opts.official
     ? `<span class="absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-secondary-container text-on-secondary-container ring-2 ring-surface-container" style="width:16px;height:16px">${OFFICIAL_BADGE_GLYPH}</span>`
-    : "";
+    : opts.public
+      ? `<span class="absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-primary-lime text-on-primary ring-2 ring-surface-container" style="width:16px;height:16px">${PUBLIC_BADGE_GLYPH}</span>`
+      : "";
 
   let icon: L.DivIcon;
 
@@ -168,6 +185,7 @@ export function CourtPopupContent({
   ratingAvg,
   ratingCount,
   official,
+  isPublic,
 }: {
   name: string;
   address?: string | null;
@@ -176,6 +194,7 @@ export function CourtPopupContent({
   ratingAvg?: number;
   ratingCount?: number;
   official?: boolean;
+  isPublic?: boolean;
 }) {
   const multi = sports && sports.length > 1;
 
@@ -187,6 +206,12 @@ export function CourtPopupContent({
           <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-secondary-container/90 px-1.5 py-0.5 font-label text-[10px] font-bold text-on-secondary-container">
             <BadgeCheck aria-hidden size={11} />
             Oficial
+          </span>
+        )}
+        {!official && isPublic && (
+          <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-primary-lime/90 px-1.5 py-0.5 font-label text-[10px] font-bold text-on-primary">
+            <MapPinned aria-hidden size={11} />
+            Lugar público
           </span>
         )}
       </div>

@@ -11,6 +11,7 @@ export type CourtMarker = {
   lng: number;
   sports?: string[] | null;
   is_official?: boolean;
+  is_public?: boolean;
 };
 
 export function CourtsMapInner({
@@ -34,7 +35,11 @@ export function CourtsMapInner({
         <Marker
           key={court.id}
           position={[court.lat, court.lng]}
-          icon={buildCourtIcon(court.sports, { official: court.is_official, preferredSports })}
+          icon={buildCourtIcon(court.sports, {
+            official: court.is_official,
+            public: court.is_public,
+            preferredSports,
+          })}
         >
           <Popup autoPan={false}>
             <CourtPopupContent
@@ -42,6 +47,7 @@ export function CourtsMapInner({
               sports={court.sports}
               href={`/canchas/${court.id}`}
               official={court.is_official}
+              isPublic={court.is_public}
             />
           </Popup>
         </Marker>

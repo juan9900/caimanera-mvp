@@ -94,6 +94,7 @@ export function MapAreaInner({
           icon={buildCourtIcon(court.sports, {
             selected: court.id === selectedId,
             official: court.is_official,
+            public: court.is_public,
             preferredSports,
           })}
           eventHandlers={{ click: () => onSelect(court.id) }}
@@ -107,6 +108,7 @@ export function MapAreaInner({
               ratingAvg={court.rating_avg}
               ratingCount={court.rating_count}
               official={court.is_official}
+              isPublic={court.is_public}
             />
           </Popup>
         </Marker>

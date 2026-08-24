@@ -74,28 +74,40 @@ export const getUserLocation = cache(async (): Promise<UserLocation | null> => {
 
 export type Court = Tables<"courts">;
 
-/** Fetches all courts visible to the current user, alphabetically. */
+/**
+ * Fetches all courts visible to the current user, alphabetically. A court
+ * added by a user (`verified: false`, see `createPendingCourt` in
+ * `app/actions/courts.ts`) is only visible to whoever added it and to
+ * admins — everyone else sees it once an admin verifies it in
+ * `/admin/sugerencias`.
+ */
 export const getCourts = cache(async (): Promise<Court[]> => {
   const session = await verifySession();
   if (!session) return [];
 
+  const isAdmin = await getIsAdmin();
   const supabase = await createClient();
-  const { data } = await supabase.from("courts").select("*").order("name");
+  let query = supabase.from("courts").select("*").order("name");
+  if (!isAdmin) {
+    query = query.or(`verified.eq.true,added_by.eq.${session.userId}`);
+  }
+  const { data } = await query;
 
   return data ?? [];
 });
 
-/** Fetches a single court by id, if visible to the current user. */
+/** Fetches a single court by id, if visible to the current user (see `getCourts`). */
 export const getCourt = cache(async (id: string): Promise<Court | null> => {
   const session = await verifySession();
   if (!session) return null;
 
+  const isAdmin = await getIsAdmin();
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("courts")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  let query = supabase.from("courts").select("*").eq("id", id);
+  if (!isAdmin) {
+    query = query.or(`verified.eq.true,added_by.eq.${session.userId}`);
+  }
+  const { data } = await query.maybeSingle();
 
   return data;
 });
@@ -123,7 +135,7 @@ export const getMyRatingForCourt = cache(async (courtId: string): Promise<number
 
 export type Match = Tables<"matches">;
 export type MatchWithCourt = Match & {
-  court: Pick<Court, "id" | "name"> | null;
+  court: Pick<Court, "id" | "name" | "is_public"> | null;
   organizer: { name: string | null } | null;
   /** Pending join requests for a match this user organizes. Only populated
    * by queries that compute it (`getMyInvolvedMatches`); undefined elsewhere. */
@@ -144,7 +156,7 @@ export const getOpenMatches = cache(async (): Promise<MatchWithCourt[]> => {
   const { data } = await supabase
     .from("matches")
     .select(
-      "*, court:courts(id, name), organizer:users!matches_organizer_id_fkey(name)",
+      "*, court:courts(id, name, is_public), organizer:users!matches_organizer_id_fkey(name)",
     )
     .eq("status", "abierto")
     .eq("visibility", "publica")
@@ -167,7 +179,7 @@ export const getMyMatches = cache(async (): Promise<MatchWithCourt[]> => {
   const { data } = await supabase
     .from("matches")
     .select(
-      "*, court:courts(id, name), organizer:users!matches_organizer_id_fkey(name)",
+      "*, court:courts(id, name, is_public), organizer:users!matches_organizer_id_fkey(name)",
     )
     .eq("organizer_id", session.userId)
     .order("created_at", { ascending: false });
@@ -187,7 +199,7 @@ export const getMyInvolvedMatches = cache(async (): Promise<MatchWithCourt[]> =>
 
   const supabase = await createClient();
   const matchSelect =
-    "*, court:courts(id, name), organizer:users!matches_organizer_id_fkey(name)";
+    "*, court:courts(id, name, is_public), organizer:users!matches_organizer_id_fkey(name)";
 
   const [organizedResult, participantRows] = await Promise.all([
     supabase.from("matches").select(matchSelect).eq("organizer_id", session.userId),
@@ -344,7 +356,7 @@ export const getMatch = cache(
     const { data } = await supabase
       .from("matches")
       .select(
-        "*, court:courts(id, name), organizer:users!matches_organizer_id_fkey(name)",
+        "*, court:courts(id, name, is_public), organizer:users!matches_organizer_id_fkey(name)",
       )
       .eq("id", id)
       .maybeSingle();
@@ -688,7 +700,7 @@ export const getAllMatches = cache(async (): Promise<MatchWithCourt[]> => {
   const { data } = await supabase
     .from("matches")
     .select(
-      "*, court:courts(id, name), organizer:users!matches_organizer_id_fkey(name)",
+      "*, court:courts(id, name, is_public), organizer:users!matches_organizer_id_fkey(name)",
     )
     .order("datetime", { ascending: false });
 
@@ -707,6 +719,25 @@ export const getAllCourts = cache(async (): Promise<Court[]> => {
     .order("created_at", { ascending: false });
 
   return data ?? [];
+});
+
+export type PendingCourt = Court & {
+  addedByUser: { name: string | null } | null;
+};
+
+/** Fetches courts added by users that still need admin verification (admin-only), most recent first. */
+export const getPendingCourts = cache(async (): Promise<PendingCourt[]> => {
+  const isAdmin = await getIsAdmin();
+  if (!isAdmin) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("courts")
+    .select("*, addedByUser:users!courts_added_by_fkey(name)")
+    .eq("verified", false)
+    .order("created_at", { ascending: false });
+
+  return (data as PendingCourt[] | null) ?? [];
 });
 
 export type CourtMetrics = {

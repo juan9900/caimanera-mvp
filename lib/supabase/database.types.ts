@@ -145,6 +145,7 @@ export type Database = {
           created_at: string
           id: string
           is_official: boolean
+          is_public: boolean
           lat: number
           lng: number
           logo_url: string | null
@@ -161,6 +162,7 @@ export type Database = {
           sponsor_priority: number
           sponsored_until: string | null
           sports: string[]
+          verified: boolean
           whatsapp_url: string | null
         }
         Insert: {
@@ -173,6 +175,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_official?: boolean
+          is_public?: boolean
           lat: number
           lng: number
           logo_url?: string | null
@@ -189,6 +192,7 @@ export type Database = {
           sponsor_priority?: number
           sponsored_until?: string | null
           sports?: string[]
+          verified?: boolean
           whatsapp_url?: string | null
         }
         Update: {
@@ -201,6 +205,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_official?: boolean
+          is_public?: boolean
           lat?: number
           lng?: number
           logo_url?: string | null
@@ -217,6 +222,7 @@ export type Database = {
           sponsor_priority?: number
           sponsored_until?: string | null
           sports?: string[]
+          verified?: boolean
           whatsapp_url?: string | null
         }
         Relationships: [

@@ -54,6 +54,11 @@ export default async function AdminCanchasPage() {
                       Patrocinada
                     </span>
                   )}
+                  {court.is_public && (
+                    <span className="rounded-full bg-lime-100 px-2 py-0.5 text-xs font-medium text-lime-800">
+                      Lugar público
+                    </span>
+                  )}
                 </Link>
                 <Link
                   href={`/admin/canchas/${court.id}/editar`}

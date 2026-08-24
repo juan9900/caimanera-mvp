@@ -129,6 +129,11 @@ export default async function MatchDetailPage(
             {SPORT_LABELS[match.sport] ?? match.sport} en{" "}
             {match.court?.name ?? "cancha"}
           </h1>
+          {match.court?.is_public && (
+            <span className="rounded-full bg-primary-lime/90 px-2 py-0.5 font-label text-xs font-bold text-on-primary">
+              Lugar público
+            </span>
+          )}
           <span
             className={`rounded-full px-2 py-0.5 font-label text-xs font-bold ${
               match.status === "vencido"

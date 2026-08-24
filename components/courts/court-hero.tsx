@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ArrowLeft, BadgeCheck, MapPin } from "lucide-react";
+import { ArrowLeft, BadgeCheck, MapPin, MapPinned } from "lucide-react";
 import { RatingStars } from "@/components/courts/rating-stars";
 import { BackLink } from "@/components/back-link";
 
@@ -17,6 +17,7 @@ export function CourtHero({
   ratingAvg,
   ratingCount,
   sponsored,
+  isPublic,
 }: {
   name: string;
   address: string | null;
@@ -25,6 +26,7 @@ export function CourtHero({
   ratingAvg: number;
   ratingCount: number;
   sponsored: boolean;
+  isPublic?: boolean;
 }) {
   return (
     <div className="relative -mx-4 -mt-6 h-64 w-[calc(100%+2rem)] overflow-hidden bg-surface-container sm:h-80">
@@ -69,6 +71,12 @@ export function CourtHero({
           {sponsored && (
             <span className="rounded-full bg-secondary-container/30 px-2 py-0.5 font-label text-[10px] font-bold uppercase tracking-wide text-primary-lime">
               Patrocinado
+            </span>
+          )}
+          {isPublic && (
+            <span className="flex items-center gap-1 rounded-full bg-primary-lime/90 px-2 py-0.5 font-label text-[10px] font-bold uppercase tracking-wide text-on-primary">
+              <MapPinned aria-hidden size={12} />
+              Lugar público
             </span>
           )}
         </div>

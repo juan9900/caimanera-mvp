@@ -6,6 +6,7 @@ import {
   getIsAdmin,
   getAdminMetrics,
   getActivityFeed,
+  getPendingCourts,
 } from "@/lib/auth/dal";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -24,7 +25,11 @@ export default async function AdminPage() {
   const isAdmin = await getIsAdmin();
   if (!isAdmin) redirect("/");
 
-  const [metrics, activity] = await Promise.all([getAdminMetrics(), getActivityFeed()]);
+  const [metrics, activity, pendingCourts] = await Promise.all([
+    getAdminMetrics(),
+    getActivityFeed(),
+    getPendingCourts(),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-12">
@@ -45,6 +50,14 @@ export default async function AdminPage() {
           </Link>
           <Link href="/admin/canchas" className="text-green-700 hover:underline">
             Canchas
+          </Link>
+          <Link href="/admin/sugerencias" className="text-green-700 hover:underline">
+            Lugares pendientes
+            {pendingCourts.length > 0 && (
+              <span className="ml-1 rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
+                {pendingCourts.length}
+              </span>
+            )}
           </Link>
         </nav>
 

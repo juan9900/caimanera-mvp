@@ -113,15 +113,9 @@ No mires número de descargas. Mide:
 2. **Cuántos partidos consecutivos** organiza el mismo usuario sin necesidad de recordárselo — indica retención orgánica real.
 3. **Cuántas canchas "agregadas por jugador" se repiten en múltiples partidos de distintos organizadores** — esa es la señal para saber a qué canchas contactar primero para el modelo de monetización B2B (fase 2, fuera de este MVP).
 
-## Modelo de monetización (referencia para diseño de datos, no para construir en el MVP)
+## Modelo de monetización
 
-El modelo es un marketplace de dos lados: jugadores nunca pagan (son el motor de actividad y de datos), negocios/canchas sí pagan (ahí está el ingreso). Tres niveles:
-
-1. **Pin de jugador (gratis, siempre existe).** Cualquier jugador puede escribir el nombre de una cancha y su ubicación al crear un partido. No tiene ficha, no tiene fotos, no aparece en ningún buscador/directorio — solo es visible dentro del partido puntual al que quedó ligado. Esto es intencional: le da cero valor de marketing al negocio, así que no hay conflicto con cobrarle después por más. Además, sirve como radar de demanda: qué ubicaciones agregadas por jugadores se repiten en múltiples partidos de organizadores distintos es la señal de a qué negocio contactar primero.
-2. **Perfil reclamado (gratis).** Cuando se contacta a un dueño de cancha con evidencia real de partidos organizados en su ubicación, se le ofrece gratis reclamar su cancha: logo, banner, fotos, horario, contacto. Este nivel corresponde a `is_official = true` en el modelo de datos. El objetivo de este nivel es compromiso, no ingreso — la mayoría de las canchas del directorio deberían llegar a este nivel gratis.
-3. **Destacado/Pro (pago).** Sobre una cancha ya reclamada, el pago desbloquea: aparecer primero/destacada en el home y en resultados de su zona, estadísticas simples (partidos organizados, horarios de mayor demanda), y espacio en el carrusel de banners del home. Esto no se construye en el MVP, pero el modelo de datos de `courts` debe dejar espacio para un futuro campo tipo `is_featured` / `subscription_status`.
-
-No fijar precios todavía. Validar el nivel 2 (reclamado gratis) primero; para el nivel 3, preguntar directamente a 3-5 dueños de cancha cuánto pagan hoy en promoción (ej. Instagram) para anclar el precio en vez de adivinarlo, y considerar probar tanto mensualidad fija como cobro por partido efectivamente lleno.
+El modelo de negocio completo (planes, precios, reglas de torneos, roadmap técnico) vive en `docs/business-model.md` — este párrafo original (marketplace de dos lados, jugadores gratis siempre) sigue siendo el principio rector, pero el detalle y los precios ya están definidos ahí, no aquí.
 
 ## Estructura del home (referencia — el detalle de implementación vive en el archivo separado `home-ui-spec.md`)
 

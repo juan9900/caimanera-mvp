@@ -707,18 +707,69 @@ export const getAllMatches = cache(async (): Promise<MatchWithCourt[]> => {
   return (data as MatchWithCourt[] | null) ?? [];
 });
 
-/** Fetches every court (admin-only). */
-export const getAllCourts = cache(async (): Promise<Court[]> => {
+export type CourtSubscription = Tables<"court_subscriptions">;
+
+export type CourtWithSubscription = Court & {
+  subscription: CourtSubscription | null;
+};
+
+/** Fetches every court with its current plan/subscription row, if any (admin-only). */
+export const getAllCourts = cache(async (): Promise<CourtWithSubscription[]> => {
   const isAdmin = await getIsAdmin();
   if (!isAdmin) return [];
 
   const supabase = await createClient();
   const { data } = await supabase
     .from("courts")
-    .select("*")
+    .select("*, subscription:court_subscriptions(*)")
     .order("created_at", { ascending: false });
 
-  return data ?? [];
+  // `court_subscriptions` is one-to-one (unique on court_id) but PostgREST still
+  // returns embeds of a to-many relation as an array — take the single row.
+  return (data ?? []).map((court) => ({
+    ...court,
+    subscription: Array.isArray(court.subscription)
+      ? (court.subscription[0] ?? null)
+      : court.subscription,
+  }));
+});
+
+/** Fetches a single court's current plan/subscription row (admin or one of its managers). */
+export const getCourtSubscription = cache(
+  async (courtId: string): Promise<CourtSubscription | null> => {
+    const isAdmin = await getIsAdmin();
+    const session = await verifySession();
+    if (!isAdmin && !session) return null;
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("court_subscriptions")
+      .select("*")
+      .eq("court_id", courtId)
+      .maybeSingle();
+
+    return data ?? null;
+  },
+);
+
+export type CourtManager = Tables<"court_managers"> & {
+  user: { name: string | null; phone: string | null } | null;
+};
+
+/** Fetches a court's linked owners/managers, most recently added first (admin or one of its managers). */
+export const getCourtManagers = cache(async (courtId: string): Promise<CourtManager[]> => {
+  const isAdmin = await getIsAdmin();
+  const session = await verifySession();
+  if (!isAdmin && !session) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("court_managers")
+    .select("*, user:users(name, phone)")
+    .eq("court_id", courtId)
+    .order("created_at", { ascending: false });
+
+  return (data as CourtManager[] | null) ?? [];
 });
 
 export type PendingCourt = Court & {
@@ -792,6 +843,8 @@ export type AdminMetrics = {
   totalMatches: number;
   matchesByStatus: Record<Tables<"matches">["status"], number>;
   totalParticipants: number;
+  courtsByPlan: Record<Tables<"court_subscriptions">["plan"], number>;
+  courtsExpiringSoon: number;
 };
 
 /** Aggregate counts for the admin dashboard (admin-only). */
@@ -843,6 +896,26 @@ export const getAdminMetrics = cache(async (): Promise<AdminMetrics | null> => {
       .select("*", { count: "exact", head: true }),
   ]);
 
+  const { data: subscriptions } = await supabase
+    .from("court_subscriptions")
+    .select("plan, canceled_at, current_period_end, grace_days");
+
+  const courtsByPlan: AdminMetrics["courtsByPlan"] = {
+    basico: 0,
+    visible: 0,
+    agenda: 0,
+    pro: 0,
+  };
+  let courtsExpiringSoon = 0;
+  const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  for (const sub of subscriptions ?? []) {
+    if (sub.canceled_at != null) continue;
+    courtsByPlan[sub.plan] += 1;
+    const periodEnd = new Date(sub.current_period_end);
+    if (periodEnd >= now && periodEnd <= in7Days) courtsExpiringSoon += 1;
+  }
+
   return {
     totalUsers: totalUsers ?? 0,
     newUsersLast7Days: newUsersLast7Days ?? 0,
@@ -855,6 +928,8 @@ export const getAdminMetrics = cache(async (): Promise<AdminMetrics | null> => {
       vencido: vencidos ?? 0,
     },
     totalParticipants: totalParticipants ?? 0,
+    courtsByPlan,
+    courtsExpiringSoon,
   };
 });
 

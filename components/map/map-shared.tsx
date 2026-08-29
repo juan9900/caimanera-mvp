@@ -93,9 +93,10 @@ const PUBLIC_BADGE_GLYPH = renderIconSvg(
  * the viewer's favorite sports (`opts.preferredSports`, from
  * `profile.sport_preferences`) — see `pickPinSports`. Zero sports falls back
  * to a generic location pin; one sport is a round badge with its icon;
- * two or more render as a horizontal pill of up to `MAX_PIN_SPORTS` icons,
- * plus a "+N" tail when the court offers more than that. Official courts
- * get a small "verified" badge on the corner of the pin, and public places
+ * two or three render as a horizontal pill; a court with more than
+ * `MAX_PIN_SPORTS` sports (so the pill would need a 4th "+N" tail cell)
+ * switches to a compact 2x2 grid instead of cramming 4 cells into one row.
+ * Official courts get a small "verified" badge on the corner of the pin, and public places
  * (free/open courts) get a "globe" badge instead — official takes priority
  * if a court is somehow both, so the pin never has to stack two badges.
  * Used by every court marker in the app (display maps, picker, home card,
@@ -132,6 +133,33 @@ export function buildCourtIcon(
       html: `<span class="relative flex items-center justify-center rounded-full bg-surface-container ${
         opts.selected ? "border-2 border-primary-lime shadow-[0_0_0_4px_rgba(195,244,0,0.25)]" : "border border-primary-lime/70"
       } shadow-md" style="width:${size}px;height:${size}px">${glyph}${badge}</span>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -size / 2],
+    });
+  } else if (shown.length === MAX_PIN_SPORTS && overflow > 0) {
+    // Exactly 4 cells to show (3 sport icons + the "+N" tail): a 2x2 grid
+    // reads much more compactly than cramming 4 elements into one row.
+    const iconSize = 13;
+    const gap = 3;
+    const pad = opts.selected ? 13 : 9;
+    const size = iconSize * 2 + gap + pad * 2;
+
+    const cells = [...shown, null].map((sportKey) => {
+      const glyph = sportKey
+        ? (() => {
+            const sport = getSport(sportKey);
+            return sport ? renderIconSource(sport.icon, { size: iconSize, color: "#c3f400" }) : "";
+          })()
+        : overflowLabel(overflow);
+      return `<span class="flex items-center justify-center">${glyph}</span>`;
+    });
+
+    icon = L.divIcon({
+      className: "",
+      html: `<span class="relative grid grid-cols-2 grid-rows-2 place-items-center rounded-2xl bg-surface-container ${
+        opts.selected ? "border-2 border-primary-lime shadow-[0_0_0_4px_rgba(195,244,0,0.25)]" : "border border-primary-lime/70"
+      } shadow-md" style="width:${size}px;height:${size}px;gap:${gap}px;padding:${pad}px;box-sizing:border-box">${cells.join("")}${badge}</span>`,
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
       popupAnchor: [0, -size / 2],

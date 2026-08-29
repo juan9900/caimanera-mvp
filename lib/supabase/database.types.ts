@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -92,6 +92,102 @@ export type Database = {
           },
         ]
       }
+      court_managers: {
+        Row: {
+          court_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          court_id: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          court_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_managers_court_id_fkey"
+            columns: ["court_id"]
+            isOneToOne: false
+            referencedRelation: "courts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "court_managers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      court_payments: {
+        Row: {
+          amount_usd: number
+          court_id: string
+          covers_until: string
+          created_at: string
+          created_by: string | null
+          id: string
+          method: string | null
+          note: string | null
+          paid_at: string
+          plan: Database["public"]["Enums"]["court_plan"]
+          reference: string | null
+        }
+        Insert: {
+          amount_usd: number
+          court_id: string
+          covers_until: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method?: string | null
+          note?: string | null
+          paid_at?: string
+          plan: Database["public"]["Enums"]["court_plan"]
+          reference?: string | null
+        }
+        Update: {
+          amount_usd?: number
+          court_id?: string
+          covers_until?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          method?: string | null
+          note?: string | null
+          paid_at?: string
+          plan?: Database["public"]["Enums"]["court_plan"]
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_payments_court_id_fkey"
+            columns: ["court_id"]
+            isOneToOne: false
+            referencedRelation: "courts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "court_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       court_ratings: {
         Row: {
           court_id: string
@@ -128,6 +224,63 @@ export type Database = {
           {
             foreignKeyName: "court_ratings_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      court_subscriptions: {
+        Row: {
+          canceled_at: string | null
+          court_id: string
+          current_period_end: string
+          grace_days: number
+          id: string
+          notes: string | null
+          plan: Database["public"]["Enums"]["court_plan"]
+          price_usd: number | null
+          started_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          canceled_at?: string | null
+          court_id: string
+          current_period_end: string
+          grace_days?: number
+          id?: string
+          notes?: string | null
+          plan: Database["public"]["Enums"]["court_plan"]
+          price_usd?: number | null
+          started_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          canceled_at?: string | null
+          court_id?: string
+          current_period_end?: string
+          grace_days?: number
+          id?: string
+          notes?: string | null
+          plan?: Database["public"]["Enums"]["court_plan"]
+          price_usd?: number | null
+          started_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_subscriptions_court_id_fkey"
+            columns: ["court_id"]
+            isOneToOne: true
+            referencedRelation: "courts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "court_subscriptions_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -626,6 +779,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      court_active_plan: {
+        Args: { p_court_id: string }
+        Returns: Database["public"]["Enums"]["court_plan"]
+      }
       group_preview_by_token: {
         Args: { p_token: string }
         Returns: {
@@ -662,6 +819,10 @@ export type Database = {
         Args: { p_confirmed: boolean; p_participant_id: string }
         Returns: undefined
       }
+      sync_court_plan_flags: {
+        Args: { p_court_id?: string }
+        Returns: undefined
+      }
       user_has_group_row: { Args: { p_group_id: string }; Returns: boolean }
       user_is_confirmed_in_match: {
         Args: { p_match_id: string }
@@ -677,8 +838,10 @@ export type Database = {
         Args: { p_match_id: string }
         Returns: boolean
       }
+      user_manages_court: { Args: { p_court_id: string }; Returns: boolean }
     }
     Enums: {
+      court_plan: "basico" | "visible" | "agenda" | "pro"
       friendship_status: "pendiente" | "aceptada" | "rechazada"
       group_member_status: "invitado" | "miembro"
       joined_via_type: "red_directa" | "externo"
@@ -695,7 +858,7 @@ export type Database = {
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals["public"]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
@@ -813,6 +976,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      court_plan: ["basico", "visible", "agenda", "pro"],
       friendship_status: ["pendiente", "aceptada", "rechazada"],
       group_member_status: ["invitado", "miembro"],
       joined_via_type: ["red_directa", "externo"],

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Bell, ChevronDown, User as UserIcon, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useClickOutside } from "@/lib/hooks/use-click-outside";
 
 const REALTIME_REFRESH_DEBOUNCE_MS = 800;
 
@@ -15,18 +16,6 @@ function NavBadge({ count }: { count: number }) {
       {count > 9 ? "9+" : count}
     </span>
   );
-}
-
-/** Closes `menu` when a click lands outside `ref`. */
-function useClickOutside(ref: React.RefObject<HTMLElement | null>, open: boolean, close: () => void) {
-  useEffect(() => {
-    if (!open) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) close();
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [ref, open, close]);
 }
 
 function NotificationBell({ count }: { count: number }) {

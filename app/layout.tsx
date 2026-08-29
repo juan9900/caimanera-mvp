@@ -1,10 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Anybody, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { verifySession } from "@/lib/auth/dal";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
-import { SiteHeader } from "@/components/site-header";
-import { BottomNav } from "@/components/bottom-nav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +31,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 const FAVICON_URL =
-  "https://res.cloudinary.com/mdnclientes/image/upload/v1787421446/Kancha/Isotipo_Kancha_vjiyru.webp";
+  "https://res.cloudinary.com/do8t1qxve/image/upload/v1787612162/Kancha/Isotipo_Kancha_vjiyru_qz2syj.webp";
 
 export const metadata: Metadata = {
   title: "Kancha",
@@ -50,18 +47,14 @@ export const viewport: Viewport = {
   themeColor: "#16a34a",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const session = await verifySession();
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} ${anybody.variable} ${hankenGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className={`min-h-full flex flex-col ${session ? "pb-20" : ""}`}>
-        <SiteHeader />
+      <body className="min-h-full">
         {children}
-        <BottomNav />
         <ServiceWorkerRegistration />
       </body>
     </html>

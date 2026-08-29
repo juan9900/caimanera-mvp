@@ -13,7 +13,14 @@ import {
   type EditCourtFormState,
 } from "@/lib/courts/definitions";
 
-/** Shared parsing: pulls the common + sponsorship fields out of a court form's FormData. */
+/**
+ * Shared parsing: pulls the common + sponsorship fields out of a court form's
+ * FormData. `isOfficial`/`sponsoredUntil` are NOT read here on purpose: desde la
+ * migración `court_billing_plans`, esos dos campos de `courts` son un agregado
+ * derivado que solo escribe el trigger `court_subscriptions_sync` a partir de
+ * `court_subscriptions` (ver `app/actions/billing.ts`, `setCourtPlan`) — si este
+ * form los reescribiera, pisaría lo que calcula el plan pagado.
+ */
 function readCourtFormData(formData: FormData) {
   return {
     name: formData.get("name"),
@@ -28,9 +35,7 @@ function readCourtFormData(formData: FormData) {
     bookingUrl: formData.get("bookingUrl"),
     amenities: formData.getAll("amenities"),
     sports: formData.getAll("sports"),
-    isOfficial: formData.get("isOfficial") === "true",
     isPublic: formData.get("isPublic") === "true",
-    sponsoredUntil: formData.get("sponsoredUntil"),
     sponsorPriority: formData.get("sponsorPriority"),
     promoText: formData.get("promoText"),
     promoCode: formData.get("promoCode"),
@@ -57,9 +62,7 @@ function toCourtRow(fields: CourtFormFields) {
     booking_url: fields.bookingUrl || null,
     amenities: fields.amenities,
     sports: fields.sports,
-    is_official: fields.isOfficial,
     is_public: fields.isPublic,
-    sponsored_until: fields.sponsoredUntil ? new Date(fields.sponsoredUntil).toISOString() : null,
     sponsor_priority: fields.sponsorPriority,
     promo_text: fields.promoText || null,
     promo_code: fields.promoCode || null,

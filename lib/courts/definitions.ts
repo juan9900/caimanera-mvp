@@ -7,6 +7,11 @@ import type { Court } from "@/lib/auth/dal";
  * Sponsorship/amenity fields shared by create and edit forms. `photosText`
  * holds one photo URL per line (textarea) — parsed into `courts.photos[]` by
  * the calling action; there's no file upload yet, courts are pasted URLs.
+ *
+ * `isOfficial`/`sponsoredUntil` NO están acá a propósito: desde la migración
+ * `court_billing_plans` son un agregado derivado del plan pagado de la cancha
+ * (ver `lib/billing/plans.ts` y `setCourtPlan` en `app/actions/billing.ts`), no
+ * campos que este form deba escribir.
  */
 const SponsorshipFields = {
   logoUrl: z.string().trim().url({ error: "Ingresa una URL válida." }).optional().or(z.literal("")),
@@ -15,9 +20,7 @@ const SponsorshipFields = {
   bookingUrl: z.string().trim().url({ error: "Ingresa una URL válida." }).optional().or(z.literal("")),
   amenities: z.array(z.enum(AMENITY_KEYS)).optional().default([]),
   sports: z.array(z.enum(SPORT_CATALOG_KEYS)).optional().default([]),
-  isOfficial: z.coerce.boolean().optional().default(false),
   isPublic: z.coerce.boolean().optional().default(false),
-  sponsoredUntil: z.string().trim().optional(),
   sponsorPriority: z.coerce.number().int().optional().default(0),
   promoText: z.string().trim().optional(),
   promoCode: z.string().trim().optional(),
